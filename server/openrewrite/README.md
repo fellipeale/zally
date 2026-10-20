@@ -4,10 +4,44 @@ Companion to the `spring-boot4-migration` skill, which starts at Boot 3.5. These
 Boot 2.7 -> 3.5. Nothing here modifies `build.gradle.kts`: the plugin is injected with an init script, so there
 is nothing to clean up afterwards.
 
-**Status: the recipes are untested.** The dry run was blocked in the session that wrote them. Run the dry run
-yourself and read the patch before applying anything (see below). In particular, check how much of the
-Kotlin sources and `*.gradle.kts` files the Java-oriented recipes actually touch. The zally-server module is
-100% Kotlin, and OpenRewrite's Kotlin coverage is partial.
+**Status**
+
+| Recipe | Dry run | Result |
+|--------|---------|--------|
+| `Step3_UpgradeTo35` | done | 5 files, all correct (see below) |
+| `Step1_Junit5` | blocked, not run | unknown. `NullPointerExceptionTest` uses `SpringClassRule`/`SpringMethodRule`/`@Rule` in Kotlin and the Java-oriented recipe may skip it. |
+| `Step2_Tooling` | blocked, not run | unknown. The Kotlin version is a text replace of `val kotlinVersion = "1.8.0"` in the two build files. |
+| `Step3b_RemoveLegacyLibraries` | not run | untested |
+
+### Why `Step3_UpgradeTo35` is a hand-picked subset
+
+The first version used the official composite `org.openrewrite.java.spring.boot3.UpgradeSpringBoot_3_5`.
+Its dry run on Zally (17 files) was mostly harmful:
+
+- `ApiReview.kt`: wrote Java syntax `PersistentOffsetDateTime.class` into Kotlin (does not compile).
+- `NoSecurityConfiguration.kt`: `override fun filterChain(...)` on a `WebSecurityConfigurerAdapter` that has no such
+  method, `antMatchers` left in place. `OAuthConfiguration.kt`: half-converted to lambdas, still using
+  `.requestMatchers().antMatchers().and()`, `.access("#oauth2...")` and the removed adapter. Both need a manual rewrite.
+- `zally-rule-api`: replaced `swagger-models` with `swagger-models-jakarta` twice (2.2.7 and 2.2.55) and dropped
+  `io.swagger:swagger-models:1.6.9`, although `io.swagger.models.Swagger` is still imported 5 times.
+- `runtimeOnly("javax.xml.bind:jaxb-api:2.3.1")` added to 8 build files, including `buildSrc`, and a spurious
+  `jakarta.annotation-api` in `zally-core`.
+- `hibernate-core` pinned to an explicit `6.5.3.Final`, which would hold back Boot's managed version.
+- Flyway was not touched (`flyway-core:9.11.0` is pinned) and `junit-vintage-engine` was removed while
+  `NullPointerExceptionTest` still imports `org.junit.Rule`.
+
+The useful parts are kept as explicit steps: Boot plugin version, `javax.persistence`/`javax.servlet` ->
+`jakarta.*`, and the property migrations (`spring.profiles` -> `spring.config.activate.on-profile`,
+`management.endpoints.enabled-by-default` -> `access.default`). `init.gradle` excludes the library modules and
+`buildSrc`, which have no Spring dependency. The Boot version is a text replace instead of
+`UpgradePluginVersion` because that recipe also rewrites `hibernate-core` to the old managed version.
+
+Expected saving: roughly the Jakarta imports, the Boot version and two property keys. The security, Hibernate,
+Flyway and test rewrites are manual in any case (list below).
+
+Dead legacy keys in `application-dev.yml` / `application-test.yml` (`endpoints.*`, `security.basic.enabled`)
+are not handled: delete them by hand.
+
 
 ## Usage
 
@@ -31,7 +65,7 @@ Then review `git diff`, run `./gradlew build`, commit, and continue with the nex
 |---|--------|--------------|-------------------------|
 | 1 | `Step1_Junit5` | JUnit 4 -> 5 (SpringRunner, rules). Runs on Boot 2.7. | Verify `NullPointerExceptionTest` and `RestApiTestConfiguration`; drop `junit-vintage-engine`. |
 | 2 | `Step2_Tooling` | Gradle wrapper -> 8.14.x, Kotlin plugins -> 2.2.x. | Dokka 2.x (`dokkaJavadoc` task is gone), ktlint/Spotless, kapt, pinned versions in the root `build.gradle.kts`. |
-| 3 | `Step3_UpgradeTo35` | Boot 3.5 composite: javax -> jakarta, Security 6.5, Hibernate 6, property renames, Flyway 10 + Postgres module. | See the "Manual work" list below. |
+| 3 | `Step3_UpgradeTo35` | Boot plugin 3.5.16, javax -> jakarta (persistence, servlet), property renames. | See the "Manual work" list below. |
 | 3b | `Step3b_RemoveLegacyLibraries` | Removes `stups-spring-oauth2-server`, `twintip-spring-web`, `problem-spring-web`, `usertype.core`. Opt-in: compilation fails on purpose. | Write the replacements. |
 
 Pinned tool versions (`7.39.0` plugin, `rewrite-spring 6.31.0`) match the `spring-boot4-migration` skill.

@@ -21,22 +21,42 @@ recipeList:
   - org.openrewrite.gradle.UpdateGradleWrapper:
       version: 8.14.x
       addIfMissing: false
-  - org.openrewrite.gradle.plugins.UpgradePluginVersion:
-      pluginIdPattern: org.jetbrains.kotlin.*
-      newVersion: 2.2.x
+  - org.openrewrite.text.FindAndReplace:
+      # The Kotlin version lives in a local `val kotlinVersion` (root and zally-server build files) and the plugins
+      # use the kotlin("jvm") shorthand, so UpgradePluginVersion with a plugin id pattern would not match.
+      find: val kotlinVersion = "1.8.0"
+      replace: val kotlinVersion = "2.2.21"
+      filePattern: "**/*.gradle.kts"
 
 ---
 type: specs.openrewrite.org/v1beta/recipe
 name: org.zalando.zally.migration.Boot2.Step3_UpgradeTo35
-displayName: Zally Boot 2 migration, step 3 - Spring Boot 2.7 to 3.5
+displayName: Zally Boot 2 migration, step 3 - Spring Boot 2.7 to 3.5 (hand-picked subset)
 description: >
-  Spring Boot 3.5 (includes Framework 6, Security 6.5, Hibernate 6.1 migration, javax -> jakarta, property renames)
-  plus the Flyway 10 Postgres module. Libraries without a Boot 3 release are handled by
-  org.zalando.zally.migration.Boot2.Step3b_RemoveLegacyLibraries.
+  Deliberately NOT org.openrewrite.java.spring.boot3.UpgradeSpringBoot_3_5. The dry run of that composite on Zally
+  produced invalid Kotlin (Java-style `Foo.class`), half-converted security configs, a hard-pinned hibernate-core,
+  a duplicated swagger-models-jakarta and a javax jaxb-api runtime dependency in every module.
+  This keeps the parts that were correct: Boot plugin version, javax -> jakarta, and property migrations.
+  Only the zally-server module is rewritten (see init.gradle).
 recipeList:
-  - org.openrewrite.java.spring.boot3.UpgradeSpringBoot_3_5
-  - org.openrewrite.java.flyway.MigrateToFlyway10
-  - org.openrewrite.java.flyway.AddFlywayModulePostgreSQL
+  - org.openrewrite.text.FindAndReplace:
+      # Not UpgradePluginVersion: that recipe also pins hibernate-core to the OLD managed version (5.6.14.Final).
+      find: id("org.springframework.boot") version "2.7.7"
+      replace: id("org.springframework.boot") version "3.5.16"
+      filePattern: "**/zally-server/build.gradle.kts"
+  - org.openrewrite.java.ChangePackage:
+      oldPackageName: javax.persistence
+      newPackageName: jakarta.persistence
+      recursive: true
+  - org.openrewrite.java.ChangePackage:
+      oldPackageName: javax.servlet
+      newPackageName: jakarta.servlet
+      recursive: true
+  - org.openrewrite.java.spring.boot2.SpringBootProperties_2_4
+  - org.openrewrite.java.spring.boot2.SpringBootProperties_2_7
+  - org.openrewrite.java.spring.boot3.SpringBootProperties_3_0
+  - org.openrewrite.java.spring.boot3.SpringBootProperties_3_4_EnabledToAccess
+  - org.openrewrite.java.spring.boot3.SpringBootProperties_3_5
 
 ---
 type: specs.openrewrite.org/v1beta/recipe

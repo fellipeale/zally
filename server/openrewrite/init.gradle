@@ -24,6 +24,10 @@ rootProject {
 
     rewrite {
         configFile = new File(rootProject.projectDir, "openrewrite/rewrite.yml")
+        // Library modules and buildSrc have no Spring dependency. The Jakarta/jaxb/swagger recipes
+        // only do harm there (see README.md).
+        exclusion("**/zally-core/**", "**/zally-rule-api/**", "**/zally-ruleset-zalando/**",
+            "**/zally-ruleset-zally/**", "**/zally-test/**", "**/buildSrc/**")
     }
 
     afterEvaluate {
