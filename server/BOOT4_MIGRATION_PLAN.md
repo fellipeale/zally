@@ -1,6 +1,7 @@
 # Zally server: Spring Boot 2.7 -> 4.0 migration plan
 
-Status: baseline captured, OpenRewrite 2 -> 3 recipes dry-run (step 3 only). Nothing else started.
+Status: baseline captured, OpenRewrite 2 -> 3 recipes dry-run (step 3 only), all six decisions settled.
+Nothing else started.
 Scope: `server/` (Gradle, Kotlin). `cli/` and `web-ui/` are untouched, but they are the API consumers, so they
 are part of the gates.
 
@@ -52,8 +53,10 @@ Today the production profile and Postgres are untested, so the later stages woul
   Fix `RestCorsWithOAuthTest`, which runs on the `test` profile (`permitAll`) and never exercises OAuth.
 - **Golden master:** capture status, headers and JSON for `/api-violations` (POST, GET, with and without trailing
   slash), `/supported-rules`, `/review-statistics`, `/api`, `/.well-known/schema-discovery` (twintip),
-  `/health`, `/metrics`, and the error cases (400, 401, 403, 404). Include `.yaml` suffix and `Accept: application/x-yaml`
-  behaviour (`favorPathExtension(true)` in `WebMvcConfiguration`).
+  `/health`, `/metrics`, and the error cases (400, 401, 403, 404, 405, malformed JSON, unmapped route). Pin the
+  exact error JSON (`title`, `status`, `detail` and nothing else) as a test, since decision 4 keeps that shape.
+  Include `.yaml` suffix and `Accept: application/x-yaml` behaviour (`favorPathExtension(true)` in
+  `WebMvcConfiguration`): decision 3 removes the suffix, so the diff must show up as an approved change.
 - **Actuator test** on the management port.
 - **JUnit 4 -> 5:** `NullPointerExceptionTest` (`SpringClassRule`, `SpringMethodRule`, `@Rule`) and
   `RestApiTestConfiguration`; then drop `junit-vintage-engine`. Run OpenRewrite `Step1_Junit5` (dry run first,
@@ -101,13 +104,15 @@ half-converted the security configs, pinned `hibernate-core`, duplicated `swagge
    authorities, `#oauth2.hasScope('uid')` -> `hasAuthority("SCOPE_uid")`). Use public libraries only: the Zalando
    resource-server library from the skill's matrix lives on `maven.zalando.net` behind the VPN, and Zally is a public
    repo with public CI and Maven Central publishing.
-3. **MVC 6 behaviour changes:** trailing-slash matching is off by default (`/health/`, `/api-violations/`), and
-   `favorPathExtension(true)` / `.yaml` suffix negotiation. Decide: keep the old URLs working (explicit routes or
-   redirects) or announce the change. The golden master from stage 1 decides what must stay.
+3. **MVC 6 behaviour changes (decision 3):** trailing-slash matching is off by default and `.yaml`/`.json` suffix
+   negotiation goes away. We break both deliberately: remove `favorPathExtension(true)` from `WebMvcConfiguration`,
+   simplify the security matchers (no `/?` regex tails), keep `Accept: application/x-yaml` negotiation, and release-note it.
+   The golden master from stage 1 shows the exact before/after.
 4. **Library replacements:** `twintip-spring-web` (2 classes, `javax.servlet`, last release 2021) -> small
-   controller for `/api` and schema discovery; `problem-spring-web` (last release 2023) -> Spring `ProblemDetail`
-   (`spring.mvc.problemdetails.enabled=true`) or a Boot 3-compatible fork. Keep `application/problem+json` shape.
-   OpenRewrite `Step3b_RemoveLegacyLibraries` removes the dependencies and breaks compilation on purpose.
+   controller for `/api` and schema discovery; `problem-spring-web` (last release 2023) -> own
+   `ResponseEntityExceptionHandler` advice emitting `{title,status,detail}` as `application/problem+json`
+   (decision 4). OpenRewrite `Step3b_RemoveLegacyLibraries` removes the dependencies and breaks compilation on purpose.
+   The Zalando `problem` jar and `ProblemModule` go away too, which unblocks Jackson 3 in stage 4.
 5. **Flyway 10+:** drop the explicit 9.11.0 pin, add `flyway-database-postgresql`; confirm the Postgres version
    in production (compose uses 13) is supported by the Flyway version Boot manages.
 6. **Config cleanup:** delete dead legacy keys in `application-dev.yml` and `application-test.yml`
@@ -134,11 +139,12 @@ deprecations, 9 report.
   `-webmvc-test`, `@AutoConfigureMockMvc` is now explicit, `TestRestTemplate` needs
   `@AutoConfigureTestRestTemplate` and the `spring-boot-resttestclient` dependency. `spring-boot-starter-classic`
   can bridge temporarily.
-- **Jackson (decision needed):** Boot 4 defaults to Jackson 3 (`tools.jackson`). Zally has two custom
-  `ObjectMapper` beans (JSON and YAML), `ProblemModule`, `MappingJackson2HttpMessageConverter` and a snake-case
-  config. Options: migrate the server to Jackson 3 (the YAML mapper needs the Jackson 3 YAML module), or use the
-  deprecated `spring-boot-jackson2` bridge for now. Core and rulesets stay on Jackson 2 either way, because
-  swagger-parser needs it. Spring plans to drop Jackson 2 support in 7.2.
+- **Jackson (decision 2: Jackson 3):** Boot 4 defaults to Jackson 3 (`tools.jackson`). Migrate the two custom
+  `ObjectMapper` beans (JSON and YAML, snake-case, `WRITE_DATES_AS_TIMESTAMPS` off, `FAIL_ON_UNKNOWN_PROPERTIES` off),
+  the YAML converter in `WebMvcConfiguration` (needs the Jackson 3 YAML module) and `JsonRawValueDeserializer`. DTO
+  annotations (`JsonProperty`, `JsonInclude`, ...) keep the `com.fasterxml.jackson.annotation` package. No bridge. Core and
+  rulesets stay on Jackson 2 because swagger-parser needs it; the server hands them Strings only. The golden master
+  guards the JSON and YAML output. Spring plans to drop Jackson 2 support in 7.2.
 - **JUnit:** Spring 7 expects JUnit 6; align `zally-test` and any pinned JUnit 5 versions.
 - **Spring Security 7:** the stage 3 `SecurityFilterChain` should carry over; re-check removed matcher classes
   (`AntPathRequestMatcher` is gone in favour of `PathPatternRequestMatcher`), which also affects `PathMatchersTest`.
@@ -155,17 +161,36 @@ deprecations, 9 report.
 - Out of scope but stale, decide separately: `oss.sonatype.org` publishing URLs, `jitpack.yml` (`openjdk8`),
   `codecov-action@v1`, Go 1.16 in CI.
 
-## Open decisions
+## Decisions (all settled)
 
-1. **Target JDK:** stay on 17, or move to 21/25. Boot 4.1 supports 17 to 26.
-2. **Jackson:** migrate the server to Jackson 3 in stage 4, or bridge with Jackson 2 first.
-3. **Trailing slashes and `.yaml` URLs:** keep compatible or break deliberately. Needs a check of who calls these
-   (CLI, web-ui, other internal clients).
-4. **Error body:** is the `application/problem+json` shape a client contract? Decides how strict the golden master is
-   and whether `ProblemDetail` is acceptable.
-5. **Deployment contract:** `TOKEN_INFO_URI`, `MANAGEMENT_PORT`, `SPRING_DATASOURCE_*` and
-   `spring.oauth2.resource.tokenInfoUri`. Keep stable, or coordinate the change with whoever deploys it.
-6. **Merge cadence:** one PR per stage (recommended) or a long-lived branch.
+| # | Decision | Choice | Consequence in the plan |
+|---|----------|--------|-------------------------|
+| 1 | Target JDK | **Stay on 17** | No change to CI, `delivery.yaml`, Dockerfile base image, `jvmTarget`. A JDK bump is a separate follow-up PR. JaCoCo 0.8.8 stays. |
+| 2 | Jackson | **Jackson 3 in the server** (stage 4) | Migrate the 2 `ObjectMapper` beans, YAML converter and `JsonRawValueDeserializer` (about 5 main files). Core and rulesets stay on Jackson 2 (swagger-parser); safe because the server only passes Strings to them. |
+| 3 | Trailing slash / `.yaml` suffix | **Break deliberately, keep `Accept`-header YAML** | Drop `favorPathExtension`, simplify the security matchers to slash-less paths, release-note the change. CLI and web-ui never use either. The golden master records the old behaviour so the diff is explicit. |
+| 4 | Error body | **Keep today's 3-field shape, own advice** | See "Error body" below. Full `ProblemDetail` (adds `type`, `instance`) can be a later, announced change. |
+| 5 | Deployment config names | **Keep all names stable** | `TOKEN_INFO_URI`, `MANAGEMENT_PORT` (default 7979), `SPRING_PROFILES_ACTIVE`, `SPRING_DATASOURCE_*`, `zally.*`, `rules-config-path`, `spring.oauth2.resource.tokenInfoUri`; actuator base-path `/` with health and metrics. Existing deployments change only the image tag. |
+| 6 | Merge cadence | **One PR per stage** | Stages 1-4 are separate PRs into `main`, each passing the full gate and releasable. |
+
+### Error body (decision 4)
+
+Documented contract: `zally-api.yaml` declares every error as `application/problem+json` using the Zalando
+`Problem` schema. Observed on the 2.7 server: only `title`, `status`, `detail` are sent (404 for an unknown review
+has no `detail`; an unmapped route returns Boot's default `{timestamp,status,error,path}` as `application/json`).
+The web-ui reads `error.detail`; the CLI does not parse error bodies.
+
+Implementation: a `@ControllerAdvice` extending `ResponseEntityExceptionHandler` that writes only
+`{title, status, detail}` as `application/problem+json`, no Zalando library, no `ProblemModule`. Keep the four
+custom exception handlers (missing definition, inaccessible URL, insufficient/future time parameter) and the
+`ApiReviewNotFoundException` -> 404 without `detail`. Unmapped routes: keep the current Boot error JSON unless the
+golden master shows a reason to change it. Known unavoidable difference: Spring 6+ wording for framework errors
+(the "nested exception is com.fasterxml..." text disappears). The golden master records every such diff.
+
+### Merge cadence (decision 6)
+
+PR 1 safety net (Boot 2.7), PR 2 tooling (Boot 2.7), PR 3 Boot 3.5, PR 4 Boot 4.0. Each merges only when the
+general gate is green. Release Boot 3.5 before starting PR 4 if practical.
+
 
 ## Risks
 
@@ -173,7 +198,7 @@ deprecations, 9 report.
 |---|---|---|
 | Auth rewrite untested today | stage 3 | stage 1 production-profile security tests |
 | Hibernate 6 rejects the HQL or the timestamp mapping at startup | stage 3 | Postgres + upgrade-compatibility tests |
-| Trailing-slash / `.yaml` clients break silently | stage 3 | golden master + CLI integration tests |
+| Trailing-slash / `.yaml` clients break (accepted, decision 3) | stage 3 | golden master shows the diff; release note; CLI and web-ui verified unaffected |
 | OpenRewrite output wrong on Kotlin | stages 1-4 | always dry run, read the patch, narrow the recipe list |
 | Pinned versions hold the stack back or conflict with Boot-managed ones | stages 2-4 | pin audit in stage 2 |
 | Library consumers hit Kotlin/Jackson/JUnit version changes | stage 2, 4 | language/api version, release notes |
