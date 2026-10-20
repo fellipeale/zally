@@ -1,0 +1,65 @@
+# OpenRewrite recipes for the Zally Spring Boot 2.7 -> 3.5 migration.
+# Run them one at a time, in order, and commit after each (see README.md).
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: org.zalando.zally.migration.Boot2.Step1_Junit5
+displayName: Zally Boot 2 migration, step 1 - JUnit 4 to JUnit 5 (still on Boot 2.7)
+description: >
+  Moves SpringRunner/SpringClassRule/@Rule based tests to JUnit 5 so junit-vintage-engine can be dropped.
+  Runs on Boot 2.7, before any version bump.
+recipeList:
+  - org.openrewrite.java.spring.boot2.SpringBoot2JUnit4to5Migration
+
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: org.zalando.zally.migration.Boot2.Step2_Tooling
+displayName: Zally Boot 2 migration, step 2 - Gradle wrapper and Kotlin plugins (still on Boot 2.7)
+description: >
+  Gradle 8.0-rc1 -> 8.14.x (needed by the Boot 4 plugin later) and the Kotlin Gradle plugins to 2.2.x.
+  Dokka, Spotless/ktlint and kapt are NOT covered and have to be bumped by hand.
+recipeList:
+  - org.openrewrite.gradle.UpdateGradleWrapper:
+      version: 8.14.x
+      addIfMissing: false
+  - org.openrewrite.gradle.plugins.UpgradePluginVersion:
+      pluginIdPattern: org.jetbrains.kotlin.*
+      newVersion: 2.2.x
+
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: org.zalando.zally.migration.Boot2.Step3_UpgradeTo35
+displayName: Zally Boot 2 migration, step 3 - Spring Boot 2.7 to 3.5
+description: >
+  Spring Boot 3.5 (includes Framework 6, Security 6.5, Hibernate 6.1 migration, javax -> jakarta, property renames)
+  plus the Flyway 10 Postgres module. Libraries without a Boot 3 release are handled by
+  org.zalando.zally.migration.Boot2.Step3b_RemoveLegacyLibraries.
+recipeList:
+  - org.openrewrite.java.spring.boot3.UpgradeSpringBoot_3_5
+  - org.openrewrite.java.flyway.MigrateToFlyway10
+  - org.openrewrite.java.flyway.AddFlywayModulePostgreSQL
+
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: org.zalando.zally.migration.Boot2.Step3b_RemoveLegacyLibraries
+displayName: Zally Boot 2 migration, step 3b - drop libraries that have no Boot 3 release (opt-in)
+description: >
+  These are unmaintained and javax based. Removing them breaks compilation on purpose; the replacements are
+  manual: Spring Security resource server for stups-spring-oauth2-server, a small controller for twintip,
+  ProblemDetail for problem-spring-web, native OffsetDateTime mapping for jadira usertype.
+recipeList:
+  - org.openrewrite.gradle.RemoveDependency:
+      groupId: org.zalando.stups
+      artifactId: stups-spring-oauth2-server
+      configurations: implementation
+  - org.openrewrite.gradle.RemoveDependency:
+      groupId: org.zalando
+      artifactId: twintip-spring-web
+      configurations: implementation
+  - org.openrewrite.gradle.RemoveDependency:
+      groupId: org.zalando
+      artifactId: problem-spring-web
+      configurations: implementation
+  - org.openrewrite.gradle.RemoveDependency:
+      groupId: org.jadira.usertype
+      artifactId: usertype.core
+      configurations: implementation
