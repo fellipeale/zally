@@ -170,7 +170,7 @@ deprecations, 9 report.
 | 3 | Trailing slash / `.yaml` suffix | **Break deliberately, keep `Accept`-header YAML** | Drop `favorPathExtension`, simplify the security matchers to slash-less paths, release-note the change. CLI and web-ui never use either. The golden master records the old behaviour so the diff is explicit. |
 | 4 | Error body | **Keep today's 3-field shape, own advice** | See "Error body" below. Full `ProblemDetail` (adds `type`, `instance`) can be a later, announced change. |
 | 5 | Deployment config names | **Keep all names stable** | `TOKEN_INFO_URI`, `MANAGEMENT_PORT` (default 7979), `SPRING_PROFILES_ACTIVE`, `SPRING_DATASOURCE_*`, `zally.*`, `rules-config-path`, `spring.oauth2.resource.tokenInfoUri`; actuator base-path `/` with health and metrics. Existing deployments change only the image tag. |
-| 6 | Merge cadence | **One PR per stage** | Stages 1-4 are separate PRs into `main`, each passing the full gate and releasable. |
+| 6 | Merge cadence | **Stacked PRs, one per stage; release at Boot 3.5** | Stages 0-3 are stacked PRs (each targets the previous stage's branch) and merge into `main` together, once stage 3 passes the full gate, so that Boot 3.5 can be released. Stage 4 (Boot 4.0) is a separate stack started from the released 3.5. |
 
 ### Error body (decision 4)
 
@@ -188,9 +188,19 @@ golden master shows a reason to change it. Known unavoidable difference: Spring 
 
 ### Merge cadence (decision 6)
 
-PR 1 safety net (Boot 2.7), PR 2 tooling (Boot 2.7), PR 3 Boot 3.5, PR 4 Boot 4.0. Each merges only when the
-general gate is green. Release Boot 3.5 before starting PR 4 if practical.
+Stacked branches, each PR targeting the previous one:
 
+| PR | Branch | Base | Content |
+|---|---|---|---|
+| 0 | `boot4/0-plan` | `main` | this plan, OpenRewrite recipes, CI trigger for `boot4/**` |
+| 1 | `boot4/1-safety-net` | `boot4/0-plan` | stage 1 |
+| 2 | `boot4/2-tooling` | `boot4/1-safety-net` | stage 2 |
+| 3 | `boot4/3-boot35` | `boot4/2-tooling` | stage 3 |
+
+Every PR must pass the general gate on its own. Nothing merges until PR 3 is green; then merge bottom-up,
+retargeting each PR to `main` as the one below it lands, and release Boot 3.5. Stage 4 starts from that release.
+A fix to a lower stage means rebasing the stages above it. Drop `'boot4/**'` from the CI trigger when the stack has
+merged.
 
 ## Risks
 
