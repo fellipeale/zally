@@ -25,7 +25,7 @@ plugins {
     id("org.jetbrains.dokka") version "2.2.0" apply false
     id("org.jetbrains.dokka-javadoc") version "2.2.0" apply false
     id("com.github.ben-manes.versions") version "0.44.0"
-    id("com.diffplug.spotless") version "6.12.1"
+    id("com.diffplug.spotless") version "7.2.1"
 }
 
 allprojects {
@@ -182,11 +182,11 @@ subprojects {
     spotless {
         kotlin {
             target("**/*.kt")
-            ktlint("0.47.1")
+            ktlint("1.7.1")
         }
         kotlinGradle {
             target("**/*.gradle.kts", "*.gradle.kts")
-            ktlint("0.47.1")
+            ktlint("1.7.1")
         }
     }
 
