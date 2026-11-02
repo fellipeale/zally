@@ -41,10 +41,12 @@ dependencies {
     testImplementation(project(":zally-test"))
     testImplementation("net.jadler:jadler-core:$jadlerVersion")
     testImplementation("net.jadler:jadler-jdk:$jadlerVersion")
-    testImplementation("net.jadler:jadler-junit:$jadlerVersion")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("com.jayway.jsonpath:json-path-assert:2.7.0")
     testImplementation("org.mockito:mockito-core:4.11.0")
+    // Explicit version: the Boot 2.7 managed one (1.17.x) cannot talk to current Docker engines.
+    testImplementation("org.testcontainers:junit-jupiter:1.21.4")
+    testImplementation("org.testcontainers:postgresql:1.21.4")
 }
 
 tasks.bootRun {
