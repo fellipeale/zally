@@ -10,7 +10,6 @@ import org.zalando.zally.rule.api.Severity
 import java.net.URI
 
 class ViolationStatisticTest {
-
     @Test
     fun `is empty by default`() {
         val statistic = ViolationStatistic()
@@ -22,14 +21,15 @@ class ViolationStatisticTest {
 
     @Test
     fun `takes name and type from the violation`() {
-        val result = Result(
-            id = "R1",
-            url = URI.create("https://rules.example.com/R1"),
-            title = "Title",
-            description = "Description",
-            violationType = Severity.SHOULD,
-            pointer = JsonPointer.empty()
-        )
+        val result =
+            Result(
+                id = "R1",
+                url = URI.create("https://rules.example.com/R1"),
+                title = "Title",
+                description = "Description",
+                violationType = Severity.SHOULD,
+                pointer = JsonPointer.empty(),
+            )
         val violation = ApiReview(ApiDefinitionRequest(), apiDefinition = "", violations = listOf(result)).ruleViolations.single()
 
         val statistic = ViolationStatistic(violation, 3)

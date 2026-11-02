@@ -8,11 +8,15 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 @Profile("dev", "test")
 @Configuration
 class NoSecurityConfiguration : WebSecurityConfigurerAdapter() {
-
     @Throws(Exception::class)
     override fun configure(http: HttpSecurity) {
-        http.httpBasic().disable()
-            .csrf().disable()
-            .authorizeRequests().antMatchers("/**").permitAll()
+        http
+            .httpBasic()
+            .disable()
+            .csrf()
+            .disable()
+            .authorizeRequests()
+            .antMatchers("/**")
+            .permitAll()
     }
 }

@@ -16,20 +16,25 @@ import org.zalando.zally.util.StubTokenInfoServer
  */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    classes = [Application::class, RestApiTestConfiguration::class]
+    classes = [Application::class, RestApiTestConfiguration::class],
 )
 @ActiveProfiles("production", "limited-rules")
 abstract class ProductionProfileTest {
-
     @LocalServerPort
     private var port = 0
 
     @LocalManagementPort
     private var managementPort = 0
 
-    protected fun get(path: String, token: String? = null) = send("GET", path, token)
+    protected fun get(
+        path: String,
+        token: String? = null,
+    ) = send("GET", path, token)
 
-    protected fun managementGet(path: String, token: String? = null) = send("GET", path, token, port = managementPort)
+    protected fun managementGet(
+        path: String,
+        token: String? = null,
+    ) = send("GET", path, token, port = managementPort)
 
     protected fun send(
         method: String,
@@ -37,7 +42,7 @@ abstract class ProductionProfileTest {
         token: String? = null,
         body: String? = null,
         headers: Map<String, String> = emptyMap(),
-        port: Int = this.port
+        port: Int = this.port,
     ) = RawHttp.send(port, method, path, token, body, headers = headers)
 
     companion object {

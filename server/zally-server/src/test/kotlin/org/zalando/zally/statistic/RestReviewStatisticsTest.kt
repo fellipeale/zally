@@ -15,7 +15,6 @@ import java.net.URI
 import java.time.LocalDate
 
 class RestReviewStatisticsTest : RestApiBaseTest() {
-
     @Test
     fun shouldReturnEmptyReviewStatisticsList() {
         assertThat(reviewStatistics.totalReviews).isEqualTo(0)
@@ -119,12 +118,18 @@ class RestReviewStatisticsTest : RestApiBaseTest() {
         assertThat(getReviewStatisticsFor(from, "").totalReviews).isEqualTo(2)
     }
 
-    private fun getReviewStatisticsFor(from: LocalDate, userAgent: String): ReviewStatistics {
+    private fun getReviewStatisticsFor(
+        from: LocalDate,
+        userAgent: String,
+    ): ReviewStatistics {
         val url = "$REVIEW_STATISTICS_URL?from=$from&user_agent=$userAgent"
         return restTemplate.getForEntity(url, ReviewStatistics::class.java).body!!
     }
 
-    private fun createRandomReviewsInBetween(from: LocalDate, to: LocalDate): List<ApiReview> {
+    private fun createRandomReviewsInBetween(
+        from: LocalDate,
+        to: LocalDate,
+    ): List<ApiReview> {
         val reviews = mutableListOf<ApiReview>()
 
         var currentDate = LocalDate.from(from)
@@ -137,8 +142,12 @@ class RestReviewStatisticsTest : RestApiBaseTest() {
         return reviews
     }
 
-    private fun apiReview(date: LocalDate, apiName: String?, userAgent: String): ApiReview {
-        return ApiReview(
+    private fun apiReview(
+        date: LocalDate,
+        apiName: String?,
+        userAgent: String,
+    ): ApiReview =
+        ApiReview(
             request = ApiDefinitionRequest(),
             userAgent = userAgent,
             apiDefinition = "dummyApiDefinition",
@@ -146,24 +155,25 @@ class RestReviewStatisticsTest : RestApiBaseTest() {
             day = date,
             name = apiName,
             apiId = "48aa0090-25ef-11e8-b467-0ed5f89f718b",
-            numberOfEndpoints = 2
+            numberOfEndpoints = 2,
         )
-    }
 
-    private fun createRandomViolations(): List<Result> {
-        return listOf(
+    private fun createRandomViolations(): List<Result> =
+        listOf(
             Result(
                 id = "TestRuleId",
                 url = URI.create("http://rules.example.com/test"),
                 title = "Test Rule Title",
                 description = "Description of test rule",
                 violationType = Severity.MUST,
-                pointer = "/pointer".toJsonPointer()
-            )
+                pointer = "/pointer".toJsonPointer(),
+            ),
         )
-    }
 
-    private fun assertBadRequestFor(from: Any?, to: Any?) {
+    private fun assertBadRequestFor(
+        from: Any?,
+        to: Any?,
+    ) {
         val response = getReviewStatisticsBetween(from, to, ErrorResponse::class.java)
 
         assertThat(response.statusCode).isEqualTo(BAD_REQUEST)

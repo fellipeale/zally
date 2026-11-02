@@ -40,7 +40,6 @@ import javax.persistence.EntityManager
 @ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class ApiReviewPostgresTest {
-
     @Autowired
     private lateinit var repository: ApiReviewRepository
 
@@ -62,26 +61,29 @@ class ApiReviewPostgresTest {
 
     @Test
     fun `flyway applies all migrations`() {
-        val versions = jdbc.queryForList(
-            "SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank",
-            String::class.java
-        )
+        val versions =
+            jdbc.queryForList(
+                "SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank",
+                String::class.java,
+            )
 
         assertThat(versions).containsExactly("001", "002", "003", "004", "005", "006", "007")
     }
 
     @Test
     fun `round-trips an api review with its violations`() {
-        val review = ApiReview(
-            request = ApiDefinitionRequest(),
-            userAgent = "zally-cli/1.0",
-            apiDefinition = OPENAPI,
-            violations = listOf(
-                result("R1", Severity.MUST, "/paths", 3..4),
-                result("R2", Severity.SHOULD, "/info")
-            ),
-            created = CREATED
-        )
+        val review =
+            ApiReview(
+                request = ApiDefinitionRequest(),
+                userAgent = "zally-cli/1.0",
+                apiDefinition = OPENAPI,
+                violations =
+                    listOf(
+                        result("R1", Severity.MUST, "/paths", 3..4),
+                        result("R2", Severity.SHOULD, "/info"),
+                    ),
+                created = CREATED,
+            )
         repository.save(review)
         flushAndClear()
 
@@ -126,11 +128,12 @@ class ApiReviewPostgresTest {
         val review = repository.save(ApiReview(ApiDefinitionRequest(), apiDefinition = OPENAPI))
         flushAndClear()
 
-        val stored = jdbc.queryForObject(
-            "SELECT external_id FROM api_review WHERE id = ?",
-            UUID::class.java,
-            review.id
-        )
+        val stored =
+            jdbc.queryForObject(
+                "SELECT external_id FROM api_review WHERE id = ?",
+                UUID::class.java,
+                review.id,
+            )
 
         assertThat(stored).isEqualTo(review.externalId)
     }
@@ -143,11 +146,12 @@ class ApiReviewPostgresTest {
         flushAndClear()
 
         // The column has no time zone, so read the literal wall-clock value, not a Timestamp through the JVM zone.
-        val literal = jdbc.queryForObject(
-            "SELECT to_char(created, 'YYYY-MM-DD\"T\"HH24:MI:SS') FROM api_review WHERE id = ?",
-            String::class.java,
-            review.id
-        )
+        val literal =
+            jdbc.queryForObject(
+                "SELECT to_char(created, 'YYYY-MM-DD\"T\"HH24:MI:SS') FROM api_review WHERE id = ?",
+                String::class.java,
+                review.id,
+            )
 
         assertThat(literal).isEqualTo("2023-05-01T10:15:30")
     }
@@ -162,21 +166,23 @@ class ApiReviewPostgresTest {
         val review = repository.save(ApiReview(ApiDefinitionRequest(), apiDefinition = OPENAPI, created = created))
         flushAndClear()
 
-        val literal = jdbc.queryForObject(
-            "SELECT to_char(created, 'YYYY-MM-DD\"T\"HH24:MI:SS') FROM api_review WHERE id = ?",
-            String::class.java,
-            review.id
-        )
+        val literal =
+            jdbc.queryForObject(
+                "SELECT to_char(created, 'YYYY-MM-DD\"T\"HH24:MI:SS') FROM api_review WHERE id = ?",
+                String::class.java,
+                review.id,
+            )
 
         assertThat(literal).isEqualTo("2023-05-01T12:15:30")
     }
 
     @Test
     fun `column type of created is timestamp without time zone`() {
-        val type = jdbc.queryForObject(
-            "SELECT data_type FROM information_schema.columns WHERE table_name = 'api_review' AND column_name = 'created'",
-            String::class.java
-        )
+        val type =
+            jdbc.queryForObject(
+                "SELECT data_type FROM information_schema.columns WHERE table_name = 'api_review' AND column_name = 'created'",
+                String::class.java,
+            )
 
         assertThat(type).isEqualTo("timestamp without time zone")
     }
@@ -196,7 +202,7 @@ class ApiReviewPostgresTest {
                 2, 1, 0, 0, 'legacy-agent', 'legacy-id', ?
             )
             """.trimIndent(),
-            externalId
+            externalId,
         )
         entityManager.clear()
 
@@ -221,7 +227,7 @@ class ApiReviewPostgresTest {
                 must_violations, should_violations, may_violations, hint_violations, external_id
             ) VALUES ('Legacy API', '{}', TRUE, DATE '2023-05-01', TIMESTAMP '2023-05-01 10:15:30', 0, 1, 0, 0, 0, ?)
             """.trimIndent(),
-            externalId
+            externalId,
         )
         jdbc.update(
             """
@@ -232,7 +238,7 @@ class ApiReviewPostgresTest {
                 '/info', 5, 6
             FROM api_review WHERE external_id = ?
             """.trimIndent(),
-            externalId
+            externalId,
         )
         entityManager.clear()
 
@@ -256,8 +262,8 @@ class ApiReviewPostgresTest {
                 ApiDefinitionRequest(),
                 userAgent = "web",
                 apiDefinition = "",
-                created = at("2023-05-02")
-            )
+                created = at("2023-05-02"),
+            ),
         )
         flushAndClear()
 
@@ -311,12 +317,13 @@ class ApiReviewPostgresTest {
         should: Int = 0,
         may: Int = 0,
         hint: Int = 0,
-        endpoints: Int = 1
+        endpoints: Int = 1,
     ) {
-        val violations = List(must) { result("M$it", Severity.MUST) } +
-            List(should) { result("S$it", Severity.SHOULD) } +
-            List(may) { result("Y$it", Severity.MAY) } +
-            List(hint) { result("H$it", Severity.HINT) }
+        val violations =
+            List(must) { result("M$it", Severity.MUST) } +
+                List(should) { result("S$it", Severity.SHOULD) } +
+                List(may) { result("Y$it", Severity.MAY) } +
+                List(hint) { result("H$it", Severity.HINT) }
         repository.save(
             ApiReview(
                 ApiDefinitionRequest(),
@@ -325,8 +332,8 @@ class ApiReviewPostgresTest {
                 violations = violations,
                 name = name,
                 created = at(day),
-                numberOfEndpoints = endpoints
-            )
+                numberOfEndpoints = endpoints,
+            ),
         )
     }
 
@@ -337,23 +344,29 @@ class ApiReviewPostgresTest {
         entityManager.clear()
     }
 
-    private fun result(id: String, severity: Severity, pointer: String = "/", lines: IntRange? = null) = Result(
+    private fun result(
+        id: String,
+        severity: Severity,
+        pointer: String = "/",
+        lines: IntRange? = null,
+    ) = Result(
         id = id,
         url = URI.create("https://rules.example.com/$id"),
         title = "Title $id",
         description = "Description $id",
         violationType = severity,
         pointer = JsonPointer.compile(pointer),
-        lines = lines
+        lines = lines,
     )
 
     companion object {
         private val CREATED = OffsetDateTime.of(2023, 5, 1, 10, 15, 30, 0, ZoneOffset.UTC)
 
-        private val OPENAPI = """
+        private val OPENAPI =
+            """
             {"swagger":"2.0","info":{"title":"Test API","x-api-id":"test-api-id","version":"1"},
              "paths":{"/pets":{"get":{"responses":{"200":{"description":"ok"}}}}}}
-        """.trimIndent()
+            """.trimIndent()
 
         @Container
         @JvmField

@@ -6,7 +6,6 @@ import java.lang.management.ManagementFactory
 import javax.management.ObjectName
 
 class ApplicationTest {
-
     @Test
     fun `main starts the application and it shuts down again`() {
         val admin = ObjectName("org.springframework.boot:type=Admin,name=SpringApplication")
@@ -18,8 +17,8 @@ class ApplicationTest {
                 "--spring.application.admin.enabled=true",
                 "--server.port=0",
                 "--management.server.port=0",
-                "--spring.main.banner-mode=off"
-            )
+                "--spring.main.banner-mode=off",
+            ),
         )
 
         try {

@@ -25,17 +25,18 @@ import org.zalando.zally.core.toEscapedJsonPointer
 class NullPointerExceptionTest {
     companion object {
         @JvmStatic
-        fun parameters(): Iterable<Array<String>> = (
-            parametersFromFullFeaturedSpec() +
-                parametersFromPetstore()
-            )
-            .asIterable()
+        fun parameters(): Iterable<Array<String>> =
+            (
+                parametersFromFullFeaturedSpec() +
+                    parametersFromPetstore()
+            ).asIterable()
 
         private fun JsonNode.pretty(): String = Yaml.pretty().writeValueAsString(this)
 
         private fun parametersFromFullFeaturedSpec(): Sequence<Array<String>> {
             @Language("YAML")
-            val spec = """
+            val spec =
+                """
                 openapi: '3.0.1'
 
                 info:
@@ -355,42 +356,46 @@ class NullPointerExceptionTest {
                     parameters:
                     - name: Parameter name
 
-            """.trimIndent()
+                """.trimIndent()
             return parameters("full", spec)
         }
 
-        private fun parametersFromPetstore(): Sequence<Array<String>> =
-            parameters("petstore", NullPointerExceptionTest::class.java.getResource("/fixtures/openapi3_petstore.yaml").readText())
+        private fun parametersFromPetstore(): Sequence<Array<String>> = parameters("petstore", NullPointerExceptionTest::class.java.getResource("/fixtures/openapi3_petstore.yaml").readText())
 
-        private fun parameters(name: String, spec: String): Sequence<Array<String>> {
+        private fun parameters(
+            name: String,
+            spec: String,
+        ): Sequence<Array<String>> {
             val root = ObjectTreeReader().read(spec)
             return sequenceOf(arrayOf("$name unmodified", spec)) +
                 root.allJsonPointers().reversed().asSequence().flatMap { pointer ->
-                    pointer.head()?.let { head ->
-                        val last = pointer.last()
-                        val parent = root.at(head)
-                        when (parent) {
-                            is ObjectNode -> {
-                                parent.set<ObjectNode>(last.matchingProperty, null)
-                                val param1 = arrayOf("$name with null $pointer", root.pretty())
+                    pointer
+                        .head()
+                        ?.let { head ->
+                            val last = pointer.last()
+                            val parent = root.at(head)
+                            when (parent) {
+                                is ObjectNode -> {
+                                    parent.set<ObjectNode>(last.matchingProperty, null)
+                                    val param1 = arrayOf("$name with null $pointer", root.pretty())
 
-                                parent.remove(last.matchingProperty)
-                                val param2 = arrayOf("$name with removed $pointer", root.pretty())
+                                    parent.remove(last.matchingProperty)
+                                    val param2 = arrayOf("$name with removed $pointer", root.pretty())
 
-                                sequenceOf(param1, param2)
+                                    sequenceOf(param1, param2)
+                                }
+                                is ArrayNode -> {
+                                    parent.setNull(last.matchingIndex)
+                                    val param1 = arrayOf("$name with null $pointer", root.pretty())
+
+                                    parent.remove(last.matchingIndex)
+                                    val param2 = arrayOf("$name with removed $pointer", root.pretty())
+
+                                    sequenceOf(param1, param2)
+                                }
+                                else -> emptySequence()
                             }
-                            is ArrayNode -> {
-                                parent.setNull(last.matchingIndex)
-                                val param1 = arrayOf("$name with null $pointer", root.pretty())
-
-                                parent.remove(last.matchingIndex)
-                                val param2 = arrayOf("$name with removed $pointer", root.pretty())
-
-                                sequenceOf(param1, param2)
-                            }
-                            else -> emptySequence()
-                        }
-                    }.orEmpty()
+                        }.orEmpty()
                 }
         }
 
@@ -423,7 +428,10 @@ class NullPointerExceptionTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    fun `validate with spec does not throw NullPointerException`(name: String, spec: String) {
+    fun `validate with spec does not throw NullPointerException`(
+        name: String,
+        spec: String,
+    ) {
         try {
             assertRuleManagerUsingAllAnnotatedRules(rules)
 

@@ -13,7 +13,6 @@ import java.util.Arrays
 
 @Configuration
 class WebMvcConfiguration : WebMvcConfigurer {
-
     @Autowired
     @Qualifier("yamlObjectMapper")
     private lateinit var yamlObjectMapper: ObjectMapper

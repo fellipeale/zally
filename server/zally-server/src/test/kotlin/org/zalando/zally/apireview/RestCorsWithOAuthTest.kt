@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test
  * (It used to run with `test`, where security is `permitAll` and the OAuth rules were never exercised.)
  */
 class RestCorsWithOAuthTest : ProductionProfileTest() {
-
     @Test
     fun shouldSupportCorsWhenOAuthIsEnabledOnAllResources() {
         assertPreflightAllowed("/api-violations", "POST")
@@ -21,7 +20,10 @@ class RestCorsWithOAuthTest : ProductionProfileTest() {
         assertThat(preflight("/supported-rules", "POST").status).isEqualTo(403)
     }
 
-    private fun assertPreflightAllowed(path: String, method: String) {
+    private fun assertPreflightAllowed(
+        path: String,
+        method: String,
+    ) {
         val response = preflight(path, method)
 
         assertThat(response.status).isEqualTo(200)
@@ -29,9 +31,12 @@ class RestCorsWithOAuthTest : ProductionProfileTest() {
         assertThat(response.header("access-control-allow-methods")).isEqualTo(method)
     }
 
-    private fun preflight(path: String, method: String) = send(
+    private fun preflight(
+        path: String,
+        method: String,
+    ) = send(
         "OPTIONS",
         path,
-        headers = mapOf("Origin" to "https://example.org", "Access-Control-Request-Method" to method)
+        headers = mapOf("Origin" to "https://example.org", "Access-Control-Request-Method" to method),
     )
 }

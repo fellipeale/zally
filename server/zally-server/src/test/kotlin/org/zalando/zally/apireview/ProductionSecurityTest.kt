@@ -15,15 +15,14 @@ import org.zalando.zally.util.StubTokenInfoServer.UID_TOKEN
  * purpose: the Spring Security 6 rewrite has to either reproduce it or change it as an announced difference.
  */
 class ProductionSecurityTest : ProductionProfileTest() {
-
     private val unknownReview = "/api-violations/6f1f1b1e-9a38-4c7e-8d0e-111111111111"
 
     @ParameterizedTest
     @ValueSource(
         strings = [
             "/supported-rules", "/supported-rules/", "/supported-rules?type=MUST",
-            "/review-statistics", "/review-statistics/", "/review-statistics?from=2020-01-01"
-        ]
+            "/review-statistics", "/review-statistics/", "/review-statistics?from=2020-01-01",
+        ],
     )
     fun `token with uid scope may read the protected resources`(path: String) {
         assertThat(get(path, UID_TOKEN).status).isEqualTo(200)
@@ -45,7 +44,7 @@ class ProductionSecurityTest : ProductionProfileTest() {
         assertThat(response.status).isEqualTo(500)
         assertThat(response.contentType).isEqualTo("application/problem+json")
         assertThat(response.body).isEqualTo(
-            """{"title":"Internal Server Error","status":500,"detail":"Full authentication is required to access this resource"}"""
+            """{"title":"Internal Server Error","status":500,"detail":"Full authentication is required to access this resource"}""",
         )
     }
 
@@ -65,7 +64,7 @@ class ProductionSecurityTest : ProductionProfileTest() {
 
         assertThat(response.status).isEqualTo(401)
         assertThat(response.header("www-authenticate")).isEqualTo(
-            """Bearer realm="oauth2-resource", error="invalid_token", error_description="invalid_request""""
+            """Bearer realm="oauth2-resource", error="invalid_token", error_description="invalid_request"""",
         )
         assertThat(response.body).isEqualTo("""{"error":"invalid_token","error_description":"invalid_request"}""")
     }
