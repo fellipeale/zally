@@ -6,15 +6,11 @@ import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.swagger.util.Yaml
 import org.intellij.lang.annotations.Language
-import org.junit.ClassRule
-import org.junit.Rule
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
-import org.springframework.test.context.junit4.rules.SpringClassRule
-import org.springframework.test.context.junit4.rules.SpringMethodRule
 import org.zalando.zally.apireview.RestApiTestConfiguration.Companion.assertRuleManagerUsingAllAnnotatedRules
 import org.zalando.zally.core.CompositeRulesValidator
 import org.zalando.zally.core.EMPTY_JSON_POINTER
@@ -26,12 +22,8 @@ import org.zalando.zally.core.toEscapedJsonPointer
 
 @SpringBootTest
 @ActiveProfiles("test", "all-annotated-rules")
-class NullPointerExceptionTest() {
+class NullPointerExceptionTest {
     companion object {
-        @ClassRule
-        @JvmField
-        val springClassRule = SpringClassRule()
-
         @JvmStatic
         fun parameters(): Iterable<Array<String>> = (
             parametersFromFullFeaturedSpec() +
@@ -422,10 +414,6 @@ class NullPointerExceptionTest() {
                     else -> emptyList()
                 }
     }
-
-    @Rule
-    @JvmField
-    final val springMethodRule = SpringMethodRule()
 
     @Autowired
     private lateinit var validator: CompositeRulesValidator
