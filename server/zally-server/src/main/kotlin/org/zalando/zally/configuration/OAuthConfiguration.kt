@@ -22,7 +22,6 @@ import org.zalando.stups.oauth2.spring.server.TokenInfoResourceServerTokenServic
 @Profile("production")
 @Import(SecurityProblemSupport::class)
 class OAuthConfiguration : ResourceServerConfigurerAdapter() {
-
     @Value("\${spring.oauth2.resource.tokenInfoUri}")
     private lateinit var tokenInfoUri: String
 
@@ -37,23 +36,27 @@ class OAuthConfiguration : ResourceServerConfigurerAdapter() {
     @Throws(Exception::class)
     override fun configure(http: HttpSecurity) {
         http
-            .httpBasic().disable()
-            .requestMatchers().antMatchers("/**")
+            .httpBasic()
+            .disable()
+            .requestMatchers()
+            .antMatchers("/**")
             .and()
             .sessionManagement()
             .sessionCreationPolicy(SessionCreationPolicy.NEVER)
             .and()
             .authorizeRequests()
-            .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-            .regexMatchers("/health/?").permitAll()
+            .antMatchers(HttpMethod.OPTIONS, "/**")
+            .permitAll()
+            .regexMatchers("/health/?")
+            .permitAll()
             .regexMatchers(
                 "/metrics/?(\\?.*)?",
                 "/api-violations/?([a-z0-9-]+/?)?(\\?)?",
                 "/supported-rules/?(\\?.*)?",
-                "/review-statistics/?(\\?.*)?"
-            )
-            .access("#oauth2.hasScope('uid')")
-            .antMatchers("**").denyAll()
+                "/review-statistics/?(\\?.*)?",
+            ).access("#oauth2.hasScope('uid')")
+            .antMatchers("**")
+            .denyAll()
 
         http
             .exceptionHandling()
@@ -62,7 +65,5 @@ class OAuthConfiguration : ResourceServerConfigurerAdapter() {
     }
 
     @Bean
-    fun customResourceTokenServices(): ResourceServerTokenServices {
-        return TokenInfoResourceServerTokenServices(tokenInfoUri)
-    }
+    fun customResourceTokenServices(): ResourceServerTokenServices = TokenInfoResourceServerTokenServices(tokenInfoUri)
 }

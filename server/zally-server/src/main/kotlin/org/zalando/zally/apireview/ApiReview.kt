@@ -31,15 +31,14 @@ class ApiReview(
     val apiId: String? = OpenApiHelper.extractApiId(apiDefinition),
     @Type(
         type = "org.jadira.usertype.dateandtime.threeten.PersistentOffsetDateTime",
-        parameters = [Parameter(name = "javaZone", value = "UTC")]
+        parameters = [Parameter(name = "javaZone", value = "UTC")],
     )
     @Column(nullable = false)
     val created: OffsetDateTime = Instant.now().atOffset(ZoneOffset.UTC),
     @Column(nullable = false)
     val day: LocalDate? = created.toLocalDate(),
-    val numberOfEndpoints: Int = EndpointCounter.count(apiDefinition)
+    val numberOfEndpoints: Int = EndpointCounter.count(apiDefinition),
 ) : Serializable {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long = 0
@@ -58,5 +57,9 @@ class ApiReview(
     val hintViolations: Int = countViolations(Severity.HINT)
 
     private fun countViolations(severity: Severity) =
-        ruleViolations.stream().filter { r -> r.type === severity }.count().toInt()
+        ruleViolations
+            .stream()
+            .filter { r -> r.type === severity }
+            .count()
+            .toInt()
 }

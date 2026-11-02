@@ -13,7 +13,6 @@ import javax.servlet.http.HttpServletRequest
  * This serves as a reminder/documentation of how the matchers do work.
  */
 class PathMatchersTest {
-
     @Test
     fun `antMatcher without trailing slash matches just requests without trailing slash`() {
         val matcher = AntPathRequestMatcher("/metrics")
@@ -76,9 +75,10 @@ class PathMatchersTest {
         assertThat(matcher.matches(request("/metrics/further"))).isTrue()
     }
 
-    private fun request(path: String) = Mockito.mock(HttpServletRequest::class.java).also {
-        Mockito.`when`(it.servletPath).thenReturn(path)
-        Mockito.`when`(it.contextPath).thenReturn(path)
-        Mockito.`when`(it.requestURI).thenReturn(path)
-    }
+    private fun request(path: String) =
+        Mockito.mock(HttpServletRequest::class.java).also {
+            Mockito.`when`(it.servletPath).thenReturn(path)
+            Mockito.`when`(it.contextPath).thenReturn(path)
+            Mockito.`when`(it.requestURI).thenReturn(path)
+        }
 }

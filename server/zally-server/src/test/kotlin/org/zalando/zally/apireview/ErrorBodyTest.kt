@@ -14,7 +14,6 @@ import org.zalando.zally.util.RawHttp
  * by the golden master instead.
  */
 class ErrorBodyTest : HttpContractTest() {
-
     @Autowired
     private lateinit var objectMapper: ObjectMapper
 
@@ -27,9 +26,13 @@ class ErrorBodyTest : HttpContractTest() {
         "GET,  /review-statistics?to=2000-01-31, 400",
         "GET,  /review-statistics?from=2999-01-01, 400",
         "PUT,  /api-violations/6f1f1b1e-9a38-4c7e-8d0e-111111111111, 405",
-        "POST, /supported-rules, 405"
+        "POST, /supported-rules, 405",
     )
-    fun `errors have title, status and detail`(method: String, path: String, status: Int) {
+    fun `errors have title, status and detail`(
+        method: String,
+        path: String,
+        status: Int,
+    ) {
         val response = send(method, path, body = if (method == "GET") null else "{")
 
         assertProblem(response, status)
@@ -74,7 +77,10 @@ class ErrorBodyTest : HttpContractTest() {
         assertThat(fields(response)).containsExactlyInAnyOrder("timestamp", "status", "error", "path")
     }
 
-    private fun assertProblem(response: RawHttp.Response, status: Int) {
+    private fun assertProblem(
+        response: RawHttp.Response,
+        status: Int,
+    ) {
         assertThat(response.status).isEqualTo(status)
         assertThat(response.contentType).isEqualTo("application/problem+json")
         assertThat(json(response).path("status").asInt()).isEqualTo(status)

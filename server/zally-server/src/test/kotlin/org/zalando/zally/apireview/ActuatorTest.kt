@@ -10,7 +10,6 @@ import org.springframework.beans.factory.annotation.Autowired
  * `health` and `metrics`. Deployments and the docker-compose health check depend on this.
  */
 class ActuatorTest : HttpContractTest() {
-
     @Autowired
     private lateinit var objectMapper: ObjectMapper
 

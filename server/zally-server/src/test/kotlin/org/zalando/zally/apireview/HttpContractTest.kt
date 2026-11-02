@@ -17,11 +17,10 @@ import org.zalando.zally.util.RawHttp
  */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    classes = [Application::class, RestApiTestConfiguration::class]
+    classes = [Application::class, RestApiTestConfiguration::class],
 )
 @ActiveProfiles("test", "limited-rules")
 abstract class HttpContractTest {
-
     @LocalServerPort
     private var port = 0
 
@@ -43,16 +42,17 @@ abstract class HttpContractTest {
         contentType: String? = "application/json",
         accept: String? = null,
         headers: Map<String, String> = emptyMap(),
-        management: Boolean = false
-    ): RawHttp.Response = RawHttp.send(
-        port = if (management) managementPort else port,
-        method = method,
-        path = path,
-        body = body,
-        contentType = contentType,
-        accept = accept,
-        headers = headers
-    )
+        management: Boolean = false,
+    ): RawHttp.Response =
+        RawHttp.send(
+            port = if (management) managementPort else port,
+            method = method,
+            path = path,
+            body = body,
+            contentType = contentType,
+            accept = accept,
+            headers = headers,
+        )
 
     protected fun assertThatBody(response: RawHttp.Response) = assertThat(response.body)
 

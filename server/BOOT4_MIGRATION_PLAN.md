@@ -78,6 +78,22 @@ Today the production profile and Postgres are untested, so the later stages woul
   json-schema-core forced to 1.2.14. With the Spring dependency-management plugin, a version declared on the
   dependency beats the Boot-managed one, so these silently hold the stack back. Decide per pin: remove (let Boot
   manage) or keep with a reason. `zally-test` exposes JUnit 5.9.1 and logback as `api`.
+- **Result (done, `boot4/2-tooling`):** Gradle 8.14.6, Kotlin 2.2.21, Dokka 2.2.0 (`dokkaGeneratePublicationJavadoc`),
+  spotless 7.2.1 with ktlint 1.7.1. kapt, `auto-service` and `RuleProcessor` still generate the service files.
+  The library modules compile with `languageVersion`/`apiVersion` 1.8; the server uses 2.2. The reformat is its own
+  commit, listed in `.git-blame-ignore-revs`.
+- **Pinned versions audit.** On Boot 2.7 the dependency-management plugin lets a version declared on the dependency
+  win, so most pins cannot be dropped here without a downgrade. Decision per pin:
+
+  | Pin | Boot 2.7 manages | Decision |
+  |---|---|---|
+  | Jackson 2.14.1 (root + buildSrc) | 2.13.4 | keep; drop in stage 3 (let Boot 3.5 manage it) |
+  | snakeyaml 1.33 | 1.30 | keep; drop in stage 3 (let Boot 3.5 manage it) |
+  | Mockito 4.11.0 | 4.5.1 | keep; stage 3 moves to Mockito 5 |
+  | Flyway 9.11.0 | 8.5.13 | keep; stage 3 moves to Flyway 10+ with `flyway-database-postgresql` |
+  | json-schema-core forced 1.2.14 | not managed | keep; swagger-parser pulls an older one (commit 65e62d6d "Fix dependencies") |
+  | logback 1.4.5 in `zally-test` | 1.2.11 | **inert in the server** (Boot's 1.2.11 wins; 1.4 needs slf4j 2). Only library consumers see it. Revisit in stage 3 |
+  | JUnit 5.9.1 in `zally-test` and `zally-rule-api` | 5.8.2 | **inert in the server** (resolves to 5.8.2). Align with the managed version in stage 3, JUnit 6 in stage 4 |
 - Gate: all of section "Gate for every stage" unchanged against the baseline.
 
 ## 3. Boot 2.7 -> 3.5.x (one PR)

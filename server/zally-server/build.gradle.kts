@@ -2,7 +2,7 @@
 version = ""
 
 plugins {
-    val kotlinVersion = "1.8.0"
+    val kotlinVersion = "2.2.21"
 
     kotlin("plugin.jpa") version kotlinVersion
     kotlin("plugin.noarg") version kotlinVersion

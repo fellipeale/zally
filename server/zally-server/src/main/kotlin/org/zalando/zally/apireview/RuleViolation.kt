@@ -19,9 +19,8 @@ class RuleViolation(
     @JsonIgnore
     @ManyToOne(optional = false)
     val apiReview: ApiReview,
-    result: Result
+    result: Result,
 ) : Serializable {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @JsonIgnore

@@ -10,17 +10,19 @@ import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.http.MediaType.TEXT_PLAIN_VALUE
 
 object JadlerUtil {
-
     @JvmOverloads
     fun stubResource(
         resourceName: String,
         responseBody: String = resourceToString(resourceName),
-        contentType: String = APPLICATION_JSON_VALUE
-    ): String {
-        return stubResource(resourceName, responseBody, OK.value(), contentType)
-    }
+        contentType: String = APPLICATION_JSON_VALUE,
+    ): String = stubResource(resourceName, responseBody, OK.value(), contentType)
 
-    fun stubResource(resourceName: String, responseBody: String, status: Int, contentType: String): String {
+    fun stubResource(
+        resourceName: String,
+        responseBody: String,
+        status: Int,
+        contentType: String,
+    ): String {
         val url = String.format("http://localhost:%d/%s", port(), resourceName)
 
         onRequest()
