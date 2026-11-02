@@ -54,7 +54,7 @@ subprojects {
     }
 
     tasks.withType<DokkaTask>().configureEach {
-        outputDirectory.set(buildDir.resolve("dokka"))
+        outputDirectory.set(layout.buildDirectory.dir("dokka").map { it.asFile })
     }
 
     tasks.register("javadocJar", Jar::class) {
