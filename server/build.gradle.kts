@@ -1,4 +1,5 @@
-import org.jetbrains.dokka.gradle.DokkaTask
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 java {
@@ -7,7 +8,7 @@ java {
 }
 
 plugins {
-    val kotlinVersion = "1.8.0"
+    val kotlinVersion = "2.2.21"
     val klintVersion = "11.0.0"
 
     // The buildscript is also kotlin, so we apply at the root level
@@ -21,7 +22,8 @@ plugins {
     signing
     eclipse
 
-    id("org.jetbrains.dokka") version "1.7.20" apply false
+    id("org.jetbrains.dokka") version "2.2.0" apply false
+    id("org.jetbrains.dokka-javadoc") version "2.2.0" apply false
     id("com.github.ben-manes.versions") version "0.44.0"
     id("com.diffplug.spotless") version "6.12.1"
 }
@@ -40,6 +42,7 @@ subprojects {
     apply(plugin = "com.github.ben-manes.versions")
     apply(plugin = "com.diffplug.spotless")
     apply(plugin = "org.jetbrains.dokka")
+    apply(plugin = "org.jetbrains.dokka-javadoc")
     apply(plugin = "maven-publish")
     apply(plugin = "jacoco")
     apply(plugin = "signing")
@@ -49,18 +52,23 @@ subprojects {
         includeCompileClasspath = false
     }
 
-    tasks.withType<KotlinCompile>().configureEach() {
-        kotlinOptions.jvmTarget = "17"
-    }
-
-    tasks.withType<DokkaTask>().configureEach {
-        outputDirectory.set(layout.buildDirectory.dir("dokka").map { it.asFile })
+    tasks.withType<KotlinCompile>().configureEach {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
+            // The library modules are published: keep the language and API level they were released with, so that
+            // consumers on an older Kotlin compiler can still read their metadata. The server is not published.
+            if (project.name != "zally-server") {
+                languageVersion.set(KotlinVersion.KOTLIN_1_8)
+                apiVersion.set(KotlinVersion.KOTLIN_1_8)
+            }
+        }
     }
 
     tasks.register("javadocJar", Jar::class) {
-        dependsOn(tasks["dokkaJavadoc"])
+        val javadoc = tasks.named("dokkaGeneratePublicationJavadoc")
+        dependsOn(javadoc)
         archiveClassifier.set("javadoc")
-        from(tasks["dokkaJavadoc"])
+        from(javadoc)
     }
 
     tasks.register("sourcesJar", Jar::class) {
