@@ -9,10 +9,11 @@ import org.zalando.zally.util.StubTokenInfoServer.OTHER_SCOPE_TOKEN
 import org.zalando.zally.util.StubTokenInfoServer.UID_TOKEN
 
 /**
- * Pins the access rules of `OAuthConfiguration` exactly as they behave on Spring Boot 2.7.
+ * Pins the access rules of `OAuthConfiguration`.
  *
- * Some of this is surprising (an unauthenticated request is answered with 500, `/api` is denied) and is recorded on
- * purpose: the Spring Security 6 rewrite has to either reproduce it or change it as an announced difference.
+ * These tests were written against Spring Boot 2.7 and carried over to the Spring Security 6 rewrite. Deliberate
+ * differences, all announced in the pull request: authentication failures are 401 and refused requests 403 (2.7
+ * answered both with 500), trailing slashes are not matched (decision 3), and tokeninfo rejections are `problem+json`.
  */
 class ProductionSecurityTest : ProductionProfileTest() {
     private val unknownReview = "/api-violations/6f1f1b1e-9a38-4c7e-8d0e-111111111111"
@@ -20,8 +21,8 @@ class ProductionSecurityTest : ProductionProfileTest() {
     @ParameterizedTest
     @ValueSource(
         strings = [
-            "/supported-rules", "/supported-rules/", "/supported-rules?type=MUST",
-            "/review-statistics", "/review-statistics/", "/review-statistics?from=2020-01-01",
+            "/supported-rules", "/supported-rules?type=MUST",
+            "/review-statistics", "/review-statistics?from=2020-01-01",
         ],
     )
     fun `token with uid scope may read the protected resources`(path: String) {
@@ -34,18 +35,31 @@ class ProductionSecurityTest : ProductionProfileTest() {
         assertThat(created.status).isEqualTo(200)
 
         assertThat(get(unknownReview, UID_TOKEN).status).isEqualTo(404)
-        assertThat(get("/api-violations/", UID_TOKEN).status).isEqualTo(405)
+        // a trailing slash is no longer matched (Spring 6), so it is not a known resource
+        assertThat(get("/api-violations/", UID_TOKEN).status).isEqualTo(404)
     }
 
     @Test
-    fun `request without token is rejected`() {
+    fun `request without token is unauthorized`() {
+        // Spring Boot 2.7 answered 500 here; an authentication failure is a 401.
         val response = get("/supported-rules")
 
-        assertThat(response.status).isEqualTo(500)
+        assertThat(response.status).isEqualTo(401)
         assertThat(response.contentType).isEqualTo("application/problem+json")
+        assertThat(response.header("www-authenticate")).isEqualTo("Bearer")
         assertThat(response.body).isEqualTo(
-            """{"title":"Internal Server Error","status":500,"detail":"Full authentication is required to access this resource"}""",
+            """{"title":"Unauthorized","status":401,"detail":"Full authentication is required to access this resource"}""",
         )
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["/supported-rules/", "/review-statistics/", "/api-violations/6f1f1b1e-9a38-4c7e-8d0e-111111111111/"])
+    fun `trailing slashes are not matched and so denied`(path: String) {
+        // Boot 2.7 matched them (regex `/?`) and served 200. Spring 6 does not match trailing slashes any more (decision 3).
+        val response = get(path, UID_TOKEN)
+
+        assertThat(response.status).isEqualTo(403)
+        assertThat(response.body).isEqualTo("""{"title":"Forbidden","status":403,"detail":"Access Denied"}""")
     }
 
     @ParameterizedTest
@@ -55,7 +69,7 @@ class ProductionSecurityTest : ProductionProfileTest() {
 
         assertThat(response.status).isEqualTo(401)
         assertThat(response.header("www-authenticate")).contains("invalid_token", "No 'uid'-scope found in access-token!")
-        assertThat(response.contentType).isEqualTo("application/json")
+        assertThat(response.contentType).isEqualTo("application/problem+json")
     }
 
     @Test
@@ -63,10 +77,9 @@ class ProductionSecurityTest : ProductionProfileTest() {
         val response = get("/supported-rules", "revoked-token")
 
         assertThat(response.status).isEqualTo(401)
-        assertThat(response.header("www-authenticate")).isEqualTo(
-            """Bearer realm="oauth2-resource", error="invalid_token", error_description="invalid_request"""",
-        )
-        assertThat(response.body).isEqualTo("""{"error":"invalid_token","error_description":"invalid_request"}""")
+        assertThat(response.header("www-authenticate")).startsWith("""Bearer error="invalid_token"""")
+        assertThat(response.contentType).isEqualTo("application/problem+json")
+        assertThat(response.body).startsWith("""{"title":"Unauthorized","status":401,"detail":"""")
     }
 
     @ParameterizedTest
@@ -74,9 +87,10 @@ class ProductionSecurityTest : ProductionProfileTest() {
     fun `everything else is denied even with a valid token`(path: String) {
         val response = get(path, UID_TOKEN)
 
-        assertThat(response.status).isEqualTo(500)
+        // Boot 2.7 answered 500 "Access is denied"; a refused request is a 403.
+        assertThat(response.status).isEqualTo(403)
         assertThat(response.contentType).isEqualTo("application/problem+json")
-        assertThat(response.body).isEqualTo("""{"title":"Internal Server Error","status":500,"detail":"Access is denied"}""")
+        assertThat(response.body).isEqualTo("""{"title":"Forbidden","status":403,"detail":"Access Denied"}""")
     }
 
     @ParameterizedTest
@@ -98,7 +112,7 @@ class ProductionSecurityTest : ProductionProfileTest() {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["/health", "/health/"])
+    @ValueSource(strings = ["/health"])
     fun `health on the management port is public`(path: String) {
         val response = managementGet(path)
 
@@ -106,10 +120,16 @@ class ProductionSecurityTest : ProductionProfileTest() {
         assertThat(response.body).isEqualTo("""{"status":"UP"}""")
     }
 
+    @Test
+    fun `health with a trailing slash is not public`() {
+        // Boot 2.7 allowed `/health/`; the docker-compose health check uses `/health`.
+        assertThat(managementGet("/health/").status).isEqualTo(401)
+    }
+
     @ParameterizedTest
-    @ValueSource(strings = ["/metrics", "/metrics/"])
+    @ValueSource(strings = ["/metrics"])
     fun `metrics on the management port require the uid scope`(path: String) {
-        assertThat(managementGet(path).status).isEqualTo(500)
+        assertThat(managementGet(path).status).isEqualTo(401)
         assertThat(managementGet(path, OTHER_SCOPE_TOKEN).status).isEqualTo(401)
 
         val response = managementGet(path, UID_TOKEN)
@@ -120,6 +140,6 @@ class ProductionSecurityTest : ProductionProfileTest() {
     @ParameterizedTest
     @ValueSource(strings = ["/metrics/jvm.memory.used", "/info", "/env", "/prometheus"])
     fun `other actuator paths are denied`(path: String) {
-        assertThat(managementGet(path, UID_TOKEN).status).isEqualTo(500)
+        assertThat(managementGet(path, UID_TOKEN).status).isEqualTo(403)
     }
 }

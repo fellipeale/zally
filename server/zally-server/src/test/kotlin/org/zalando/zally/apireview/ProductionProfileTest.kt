@@ -2,7 +2,7 @@ package org.zalando.zally.apireview
 
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.server.LocalManagementPort
-import org.springframework.boot.web.server.LocalServerPort
+import org.springframework.boot.test.web.server.LocalServerPort
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
