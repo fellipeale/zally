@@ -140,6 +140,39 @@ half-converted the security configs, pinned `hibernate-core`, duplicated `swagge
 
 Gate: general gate, plus the upgrade-compatibility test from stage 1.
 
+**Result (done, `boot4/3-boot35`):** Boot 3.5.16 (Hibernate 6.6, Spring Security 6.5, Flyway 11, Jackson 2.21,
+snakeyaml 2.4), Undertow stays until stage 4. Gate: 1463 tests, 0 failed,
+1 skipped (the existing one in `zally-ruleset-zally`; the server's old `@Disabled` matcher test no longer exists after
+the `PathMatchersTest` rewrite, which is why skipped went from 2 to 1); CLI integration tests and the Docker smoke test (Postgres 13,
+`dev` profile) pass.
+
+Differences from Boot 2.7 that the golden master and the production tests show (all intended or unavoidable):
+
+| Area | Boot 2.7 | Boot 3.5 | Why |
+|---|---|---|---|
+| Trailing slash (`/supported-rules/`, `/api-violations/`, `/api/`, ...) | 200 (405 for `GET /api-violations/`) | 404; in the production profile 403 | decision 3 |
+| `.yaml` / `.json` path suffix | 404 or 400 already | 404 or 400, same status | nothing removed; only the `content-disposition` header is gone |
+| No token (production) | 500 problem+json | **401** problem+json, `WWW-Authenticate: Bearer` | an authentication failure is a 401 |
+| Token without `uid` scope | 401 `application/json` | 401 `application/problem+json` | own handler, same shape as other errors |
+| Path denied for a valid token | 500 "Access is denied" | **403** "Access Denied" | an authorization failure is a 403 |
+| Rejected by tokeninfo | 401, `Bearer realm="oauth2-resource"` | 401, standard RFC 6750 `WWW-Authenticate` | built-in resource server |
+| `/health/`, `/metrics/` on the management port | allowed | `/health/` 401 | trailing slash (decision 3); `/health` is what the health check uses |
+| Framework error `detail` wording | "... nested exception is ..." | shorter Spring 6 wording | unavoidable, see Error body |
+| `ApiReview.created` | JVM-zone wall clock (correct only in a UTC JVM) | always UTC | `hibernate.jdbc.time_zone=UTC`; existing rows are valid |
+
+Notes for the next stage and for reviewers:
+- `Origin` CORS preflight and the `Allow` header order differ trivially.
+- `stups-spring-oauth2-server`, `problem-spring-web`, `twintip-spring-web` and Jadira are gone; replaced by
+  `TokenInfoOpaqueTokenIntrospector`, `ExceptionHandling`, `SchemaController` and a native Hibernate mapping.
+- `swagger-parser` (io.swagger 1.0.64, via zally-core) calls `SafeConstructor()`, which snakeyaml 2 removed: the server
+  constrains it to 1.0.76. This was found by the existing tests, not by compilation.
+- zally-core's `ReverseAstBuilder` appended an empty pointer segment for extension methods; Jackson 2.19 no longer
+  drops the trailing slash, so it now keeps the pointer instead.
+- Kotlin warnings left for later: annotation use-site targets on constructor properties (Kotlin 2.2 will apply
+  them to the field too), and `kapt` running in K1 mode in the library modules because they keep language version 1.8.
+- The upgrade-compatibility test from stage 1 is covered by the Postgres test reading rows written the old way
+  (`TIMESTAMP WITHOUT TIME ZONE`, UTC) under four JVM time zones.
+
 ## 4. Boot 3.5 -> 4.0.x (one PR, follows the `spring-boot4-migration` skill)
 
 Skill phases map as: 2 baseline (done at 3.5, re-run), 3 deprecations (done in stage 3), 4 OpenRewrite,
