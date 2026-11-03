@@ -1,7 +1,7 @@
 package org.zalando.zally.apireview
 
-import org.hibernate.annotations.Parameter
-import org.hibernate.annotations.Type
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import org.zalando.zally.core.Result
 import org.zalando.zally.dto.ApiDefinitionRequest
 import org.zalando.zally.rule.api.Severity
@@ -29,10 +29,9 @@ class ApiReview(
     violations: List<Result> = emptyList(),
     val name: String? = OpenApiHelper.extractApiName(apiDefinition),
     val apiId: String? = OpenApiHelper.extractApiId(apiDefinition),
-    @Type(
-        type = "org.jadira.usertype.dateandtime.threeten.PersistentOffsetDateTime",
-        parameters = [Parameter(name = "javaZone", value = "UTC")],
-    )
+    // The column is TIMESTAMP WITHOUT TIME ZONE and holds UTC wall-clock time.
+    // TIMESTAMP (not TIMESTAMP_WITH_TIMEZONE) plus hibernate.jdbc.time_zone=UTC (application.yml) reads and writes it as UTC.
+    @JdbcTypeCode(SqlTypes.TIMESTAMP)
     @Column(nullable = false)
     val created: OffsetDateTime = Instant.now().atOffset(ZoneOffset.UTC),
     @Column(nullable = false)

@@ -11,11 +11,8 @@ spring:
     properties:
       hibernate:
         jdbc:
-          lob:
-            # Disable noisy detection for LOB support (Postgres doesn't support it anyway)
-            # Workaround from https://hibernate.atlassian.net/browse/HHH-12368
-            # Should be unnecessary after upgrading to Spring Boot 2.2.0
-            non_contextual_creation: true
+          # created is a TIMESTAMP WITHOUT TIME ZONE holding UTC wall-clock time: read and write it as UTC
+          time_zone: UTC
   oauth2:
     resource:
       tokenInfoUri: ${TOKEN_INFO_URI}

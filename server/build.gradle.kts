@@ -163,16 +163,18 @@ subprojects {
         implementation("org.jetbrains.kotlin:kotlin-stdlib")
         implementation("org.jetbrains.kotlin:kotlin-reflect")
 
-        // We define this here so all subprojects use the same version of jackson
-        implementation("com.fasterxml.jackson.core:jackson-databind:2.14.1")
-        implementation("com.fasterxml.jackson.module:jackson-module-parameter-names:2.14.1")
-        implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.14.1")
-        implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.14.1")
-        implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.14.1")
-        implementation("org.yaml:snakeyaml:1.33")
+        // The library modules have no Spring Boot BOM, so they pin their own Jackson and snakeyaml. The server gets
+        // the versions managed by Spring Boot; an explicit version here would override them.
+        if (project.name != "zally-server") {
+            implementation("com.fasterxml.jackson.core:jackson-databind:2.14.1")
+            implementation("com.fasterxml.jackson.module:jackson-module-parameter-names:2.14.1")
+            implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.14.1")
+            implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.14.1")
+            implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.14.1")
+            implementation("org.yaml:snakeyaml:1.33")
+        }
 
         testImplementation("com.jayway.jsonpath:json-path-assert:2.7.0")
-        testImplementation("org.mockito:mockito-core:4.11.0")
     }
 
     jacoco {
