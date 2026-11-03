@@ -25,7 +25,7 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.TimeZone
 import java.util.UUID
-import javax.persistence.EntityManager
+import jakarta.persistence.EntityManager
 
 /**
  * Runs the real Flyway migrations and the JPA mapping against PostgreSQL 13 (the version used by

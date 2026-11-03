@@ -8,7 +8,7 @@ is nothing to clean up afterwards.
 
 | Recipe | Dry run | Result |
 |--------|---------|--------|
-| `Step3_UpgradeTo35` | done | 5 files, all correct (see below) |
+| `Step3_UpgradeTo35` | done, applied in stage 3 | 6 files; one value wrong (`access.default: read-only`, must be `unrestricted`), fixed by hand |
 | `Step1_Junit5` | blocked, not run | unknown. `NullPointerExceptionTest` uses `SpringClassRule`/`SpringMethodRule`/`@Rule` in Kotlin and the Java-oriented recipe may skip it. |
 | `Step2_Tooling` | blocked, not run | unknown. The Kotlin version is a text replace of `val kotlinVersion = "1.8.0"` in the two build files. |
 | `Step3b_RemoveLegacyLibraries` | not run | untested |
