@@ -12,6 +12,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.oauth2.server.resource.introspection.OpaqueTokenIntrospector
 import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationEntryPoint
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.web.client.RestClient
 
@@ -65,9 +66,7 @@ class OAuthConfiguration {
                     .opaqueToken { it.introspector(introspector) }
                     .authenticationEntryPoint(problems)
                     .accessDeniedHandler(problems)
-            }.exceptionHandling {
-                it.authenticationEntryPoint(problems).accessDeniedHandler(problems)
-            }
+            }.addFilterBefore(TokenInfoOutageFilter(problems), BearerTokenAuthenticationFilter::class.java)
 
         return http.build()
     }

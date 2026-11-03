@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 class SchemaController(
     @Value("\${twintip.yaml}") schema: Resource,
+    @Value("\${twintip.mapping:/api}") private val mapping: String,
 ) {
     private val json = ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT)
     private val yaml = ObjectMapper(YAMLFactory())
@@ -27,12 +28,12 @@ class SchemaController(
         }
 
     @GetMapping("/.well-known/schema-discovery", produces = ["application/json"])
-    fun discover() = SchemaDiscovery(schemaUrl = SCHEMA_MAPPING, schemaType = "swagger-2.0")
+    fun discover() = SchemaDiscovery(schemaUrl = mapping, schemaType = "swagger-2.0")
 
-    @GetMapping(SCHEMA_MAPPING, produces = ["application/json", "*/*"])
+    @GetMapping("\${twintip.mapping:/api}", produces = ["application/json", "*/*"])
     fun jsonSchema(): ResponseEntity<String> = response(json.writeValueAsString(node))
 
-    @GetMapping(SCHEMA_MAPPING, produces = ["application/yaml", "application/x-yaml", "text/yaml"])
+    @GetMapping("\${twintip.mapping:/api}", produces = ["application/yaml", "application/x-yaml", "text/yaml"])
     fun yamlSchema(): ResponseEntity<String> = response(yaml.writeValueAsString(node))
 
     private fun response(body: String): ResponseEntity<String> =
@@ -43,8 +44,4 @@ class SchemaController(
             .header("Access-Control-Max-Age", "3600")
             .header("Access-Control-Allow-Headers", "")
             .body(body)
-
-    companion object {
-        const val SCHEMA_MAPPING = "/api"
-    }
 }

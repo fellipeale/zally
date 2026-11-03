@@ -34,6 +34,13 @@ allprojects {
     }
 }
 
+/**
+ * The published library modules. They have no Spring Boot BOM, so they pin their own Jackson and snakeyaml, and keep
+ * an older Kotlin language level. Every other module is an application managed by Spring Boot: an explicit version
+ * there would override the Boot-managed one, so a new module gets no pins unless it is listed here.
+ */
+val publishedLibraries = setOf("zally-core", "zally-rule-api", "zally-ruleset-zalando", "zally-ruleset-zally", "zally-test")
+
 subprojects {
     group = "org.zalando"
 
@@ -56,8 +63,8 @@ subprojects {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_17)
             // The library modules are published: keep the language and API level they were released with, so that
-            // consumers on an older Kotlin compiler can still read their metadata. The server is not published.
-            if (project.name != "zally-server") {
+            // consumers on an older Kotlin compiler can still read their metadata.
+            if (project.name in publishedLibraries) {
                 languageVersion.set(KotlinVersion.KOTLIN_1_8)
                 apiVersion.set(KotlinVersion.KOTLIN_1_8)
             }
@@ -163,9 +170,7 @@ subprojects {
         implementation("org.jetbrains.kotlin:kotlin-stdlib")
         implementation("org.jetbrains.kotlin:kotlin-reflect")
 
-        // The library modules have no Spring Boot BOM, so they pin their own Jackson and snakeyaml. The server gets
-        // the versions managed by Spring Boot; an explicit version here would override them.
-        if (project.name != "zally-server") {
+        if (project.name in publishedLibraries) {
             implementation("com.fasterxml.jackson.core:jackson-databind:2.14.1")
             implementation("com.fasterxml.jackson.module:jackson-module-parameter-names:2.14.1")
             implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.14.1")

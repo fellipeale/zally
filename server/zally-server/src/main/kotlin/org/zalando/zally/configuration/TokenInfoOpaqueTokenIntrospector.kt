@@ -15,6 +15,11 @@ import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException
 import java.time.Duration
 
+/** The tokeninfo endpoint could not tell whether the token is valid. Answered with 503, not with 401. */
+class TokenInfoUnavailableException(
+    cause: Throwable,
+) : OAuth2IntrospectionException("Unable to get authorisation from tokeninfo", cause)
+
 /**
  * Validates a bearer token with a Zalando style tokeninfo endpoint: `GET <uri>` with the token in the `Authorization`
  * header answers a JSON object with `scope` (list), `uid`, `access_token`, `expires_in` and others.
@@ -65,13 +70,19 @@ class TokenInfoOpaqueTokenIntrospector(
                 ?.takeIf { it.isNotEmpty() }
                 ?: throw BadOpaqueTokenException("Empty tokeninfo response")
         } catch (e: HttpClientErrorException) {
-            // the endpoint rejected the token (400/401/403)
-            throw BadOpaqueTokenException(e.statusText.ifBlank { "invalid_token" }, e)
+            if (e.statusCode.value() in REJECTED_TOKEN_STATUSES) {
+                // the endpoint rejected the token itself
+                throw BadOpaqueTokenException("invalid_token", e)
+            }
+            // 404, 429 and the like: the endpoint is misconfigured or limiting us, the token may well be fine
+            throw TokenInfoUnavailableException(e)
         } catch (e: RestClientException) {
-            throw OAuth2IntrospectionException("Unable to get authorisation from tokeninfo", e)
+            // 5xx, timeouts, connection errors
+            throw TokenInfoUnavailableException(e)
         }
 
     companion object {
         private const val UID_SCOPE = "uid"
+        private val REJECTED_TOKEN_STATUSES = setOf(400, 401, 403)
     }
 }

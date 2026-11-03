@@ -4,8 +4,12 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.zalando.zally.util.StubTokenInfoServer.NOT_FOUND_TOKEN
 import org.zalando.zally.util.StubTokenInfoServer.NO_SCOPE_TOKEN
 import org.zalando.zally.util.StubTokenInfoServer.OTHER_SCOPE_TOKEN
+import org.zalando.zally.util.StubTokenInfoServer.RATE_LIMITED_TOKEN
+import org.zalando.zally.util.StubTokenInfoServer.SERVER_ERROR_TOKEN
+import org.zalando.zally.util.StubTokenInfoServer.SLOW_TOKEN
 import org.zalando.zally.util.StubTokenInfoServer.UID_TOKEN
 
 /**
@@ -80,6 +84,37 @@ class ProductionSecurityTest : ProductionProfileTest() {
         assertThat(response.header("www-authenticate")).startsWith("""Bearer error="invalid_token"""")
         assertThat(response.contentType).isEqualTo("application/problem+json")
         assertThat(response.body).startsWith("""{"title":"Unauthorized","status":401,"detail":"""")
+    }
+
+    @Test
+    fun `rejection by the tokeninfo endpoint does not leak its wording`() {
+        val response = get("/supported-rules", "revoked-token")
+
+        assertThat(response.status).isEqualTo(401)
+        assertThat(response.body).isEqualTo(
+            """{"title":"Unauthorized","status":401,"detail":"Full authentication is required to access this resource"}""",
+        )
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = [SERVER_ERROR_TOKEN, NOT_FOUND_TOKEN, RATE_LIMITED_TOKEN])
+    fun `a failing tokeninfo endpoint is service unavailable, not an invalid token`(token: String) {
+        // 5xx, a wrong URL (404) or rate limiting (429) say nothing about the token, so the caller must not get a 401.
+        val response = get("/supported-rules", token)
+
+        assertThat(response.status).isEqualTo(503)
+        assertThat(response.contentType).isEqualTo("application/problem+json")
+        assertThat(response.header("www-authenticate")).isNull()
+        assertThat(response.body).isEqualTo(
+            """{"title":"Service Unavailable","status":503,"detail":"Token validation is temporarily unavailable"}""",
+        )
+    }
+
+    @Test
+    fun `a tokeninfo endpoint that does not answer in time is service unavailable`() {
+        val response = get("/supported-rules", SLOW_TOKEN)
+
+        assertThat(response.status).isEqualTo(503)
     }
 
     @ParameterizedTest

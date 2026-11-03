@@ -156,6 +156,8 @@ Differences from Boot 2.7 that the golden master and the production tests show (
 | Token without `uid` scope | 401 `application/json` | 401 `application/problem+json` | own handler, same shape as other errors |
 | Path denied for a valid token | 500 "Access is denied" | **403** "Access Denied" | an authorization failure is a 403 |
 | Rejected by tokeninfo | 401, `Bearer realm="oauth2-resource"` | 401, standard RFC 6750 `WWW-Authenticate` | built-in resource server |
+| Tokeninfo endpoint fails (5xx, timeout, 404, 429) | 401 (the stups library turned any failure into an invalid token) | **503** problem+json, no `WWW-Authenticate` | the token was never checked, so it is not the caller's fault; only 400/401/403 from tokeninfo mean "bad token" |
+| Body `detail` of 401/403 | exception message | fixed text | do not echo the tokeninfo backend's wording |
 | `/health/`, `/metrics/` on the management port | allowed | `/health/` 401 | trailing slash (decision 3); `/health` is what the health check uses |
 | Framework error `detail` wording | "... nested exception is ..." | shorter Spring 6 wording | unavoidable, see Error body |
 | `ApiReview.created` | JVM-zone wall clock (correct only in a UTC JVM) | always UTC | `hibernate.jdbc.time_zone=UTC`; existing rows are valid |

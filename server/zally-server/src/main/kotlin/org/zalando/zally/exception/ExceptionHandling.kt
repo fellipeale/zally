@@ -31,7 +31,11 @@ class ExceptionHandling : ResponseEntityExceptionHandler() {
     fun handleNotFound(exception: ApiReviewNotFoundException): ResponseEntity<Any> = problem(HttpStatus.NOT_FOUND, null)
 
     @ExceptionHandler
-    fun handleAnyOther(exception: Exception): ResponseEntity<Any> = problem(HttpStatus.INTERNAL_SERVER_ERROR, exception.message)
+    fun handleAnyOther(exception: Exception): ResponseEntity<Any> {
+        // The container would have logged this; once the advice answers, nobody else does.
+        logger.error("Unexpected error while handling a request", exception)
+        return problem(HttpStatus.INTERNAL_SERVER_ERROR, exception.message)
+    }
 
     /**
      * Unmapped routes keep Spring Boot's default error body (`timestamp`, `status`, `error`, `path`) as before:
@@ -51,6 +55,9 @@ class ExceptionHandling : ResponseEntityExceptionHandler() {
         request: WebRequest,
     ): ResponseEntity<Any>? = sendContainerError(request, status)
 
+    // `sendError` hands the request to the container's ERROR dispatch (`/error`), which Boot answers with its default body.
+    // OAuthConfiguration must let that dispatch through, see `dispatcherTypeMatchers(DispatcherType.ERROR)`. The golden
+    // master and ProductionSecurityTest fail if either side changes.
     private fun sendContainerError(
         request: WebRequest,
         status: HttpStatusCode,
@@ -65,7 +72,10 @@ class ExceptionHandling : ResponseEntityExceptionHandler() {
         headers: HttpHeaders,
         statusCode: HttpStatusCode,
         request: WebRequest,
-    ): ResponseEntity<Any>? = problem(statusCode, ex.message, headers)
+    ): ResponseEntity<Any>? {
+        if (statusCode.is5xxServerError) logger.error("Server error while handling a request", ex)
+        return problem(statusCode, ex.message, headers)
+    }
 
     private fun problem(
         status: HttpStatusCode,

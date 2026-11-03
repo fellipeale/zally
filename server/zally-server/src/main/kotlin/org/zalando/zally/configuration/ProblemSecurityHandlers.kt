@@ -25,14 +25,18 @@ class ProblemSecurityHandlers(
         authException: AuthenticationException,
     ) {
         bearerEntryPoint.commence(request, response, authException)
-        write(response, HttpStatus.UNAUTHORIZED, authException.message)
+        // fixed texts: the exception message may carry details of the tokeninfo backend
+        write(response, HttpStatus.UNAUTHORIZED, "Full authentication is required to access this resource")
     }
+
+    /** The tokeninfo endpoint failed, which says nothing about the token: not a 401. */
+    fun serviceUnavailable(response: HttpServletResponse) = write(response, HttpStatus.SERVICE_UNAVAILABLE, "Token validation is temporarily unavailable")
 
     override fun handle(
         request: HttpServletRequest,
         response: HttpServletResponse,
         accessDeniedException: AccessDeniedException,
-    ) = write(response, HttpStatus.FORBIDDEN, accessDeniedException.message)
+    ) = write(response, HttpStatus.FORBIDDEN, "Access Denied")
 
     private fun write(
         response: HttpServletResponse,
