@@ -17,7 +17,10 @@ class RestCorsWithOAuthTest : ProductionProfileTest() {
 
     @Test
     fun `preflight for a method the resource does not allow is refused`() {
-        assertThat(preflight("/supported-rules", "POST").status).isEqualTo(403)
+        // Boot 3.5 answered 403; Spring 7 answers 200 without any CORS header, which the browser refuses just the same.
+        val response = preflight("/supported-rules", "POST")
+        assertThat(response.header("access-control-allow-origin")).isNull()
+        assertThat(response.header("access-control-allow-methods")).isNull()
     }
 
     private fun assertPreflightAllowed(

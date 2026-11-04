@@ -1,7 +1,7 @@
 package org.zalando.zally.dto
 
 import com.fasterxml.jackson.annotation.JsonRawValue
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import tools.jackson.databind.annotation.JsonDeserialize
 import org.zalando.zally.util.JsonRawValueDeserializer
 
 data class ApiDefinitionRequest(

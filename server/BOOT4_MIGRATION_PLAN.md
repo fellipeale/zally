@@ -204,6 +204,40 @@ deprecations, 9 report.
 - **Hibernate 7 / JPA 3.2:** re-run the Postgres and compatibility tests.
 - Gate: general gate, plus a manual Docker run.
 
+**Result (done as a patch, `boot4/4-boot40`):** Boot 4.0.9 (Spring 7.0.10, Security 7.0.8, Hibernate 7.2, Jackson 3.1,
+Tomcat 11, JUnit 6), JDK 17. `OpenRewrite UpgradeSpringBoot_4_0` was dry-run first, read, then applied; it worked from Maven
+Central without VPN and was kept, with these corrections by hand:
+- The recipe's Gradle output was reverted for the root `build.gradle.kts` (it rewrote the library modules' Jackson 2 pins to
+  Jackson 3 and added `jaxb-api`) and cleaned up in `zally-server/build.gradle.kts` (duplicate `jackson-databind`,
+  explicit `:3.5.16`/`:4.0.9` versions, Undertow kept at 3.5.16). Undertow is dropped: Boot 4 runs Tomcat 11.
+- The two `ObjectMapper` beans are `JsonMapper`/`YAMLMapper` built with the builder (Jackson 3 mappers are immutable);
+  only `jackson-module-kotlin` is added, Jackson 3 has the `java.time`, `Jdk8` and parameter-name support built in.
+  The YAML converter is Spring's `JacksonYamlHttpMessageConverter`, registered through `configureMessageConverters`
+  (`extendMessageConverters` is deprecated). It must also support `application/yaml`.
+- Core and the rulesets stay on Jackson 2 (swagger-parser). Tests that touch core's `JsonNode`/`JsonPointer` use the Jackson 2
+  types; the recipe had renamed them and `textValue()` to the Jackson 3 `asString()`.
+- `swagger-parser-v3` 2.1.12 also calls `SafeConstructor()` and logged `Error snake-parsing yaml content` for every YAML
+  definition (the review still worked via fallback). Constrained to 2.1.22 in the server.
+- Starters: `-webmvc`, `-flyway`, `-restclient`, `-security-oauth2-resource-server`; tests: `-webmvc-test`, `-data-jpa-test`,
+  `spring-boot-resttestclient`, `testcontainers-*`.
+
+Gate: 1468 tests, 0 failed, 1 skipped (same as stage 3); coverage equal. CLI integration tests pass against `bootRun`, Docker
+smoke test passes on Postgres 13 (Hibernate 7.2, Tomcat, `created` still UTC, jar still `zally-server.jar`, 85 MB).
+
+Behaviour differences from Boot 3.5 (golden master, 24 of 90 cases changed, most only a header):
+| Area | Boot 3.5 | Boot 4.0 |
+|---|---|---|
+| `Vary: Origin, Access-Control-Request-...` on error responses | present | gone (21 cases) |
+| `Content-Disposition: inline;filename=f.txt` on `.yaml`/`.json` suffix requests | gone | back (4 cases); still 404/400 |
+| `POST /api-violations` with `Accept: text/html` (406) | no `Location` | `Location` header present |
+| `/health` body | `{"status":"UP"}` | `liveness`/`readiness` groups added; switched off with `management.endpoint.health.probes.enabled=false` to keep the body |
+| 401 `WWW-Authenticate` | `Bearer` | `Bearer resource_metadata="http://.../.well-known/oauth-protected-resource"` |
+| Preflight for a method the resource does not allow | 403 | 200 with no `Access-Control-*` headers (browsers refuse it the same) |
+| JSON parse error text for a wrongly typed list | "Cannot construct instance of `java.util.ArrayList`..." | "Cannot deserialize value of type `java.util.ArrayList<java.lang.String>`..." |
+
+Not done / follow-ups: the `production` profile has still not been started from the packaged jar; the real tokeninfo endpoint
+has never been called (stub only); Kotlin warnings about annotation use-site targets remain; JDK 17 is kept (decision 1).
+
 ## 5. Cleanup
 
 - Remove temporary compat shims (classic starters, Jackson 2 bridge if used) and `spring-boot-properties-migrator`.

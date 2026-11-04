@@ -9,7 +9,7 @@ plugins {
     kotlin("plugin.spring") version kotlinVersion
     kotlin("plugin.allopen") version kotlinVersion
 
-    id("org.springframework.boot") version "3.5.16"
+    id("org.springframework.boot") version "4.0.9"
 }
 
 apply(plugin = "io.spring.dependency-management")
@@ -31,17 +31,15 @@ dependencies {
     implementation(project(":zally-core"))
     implementation(project(":zally-ruleset-zalando"))
     implementation(project(":zally-ruleset-zally"))
-    implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-undertow")
+    implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-security")
-    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
-    implementation("org.flywaydb:flyway-core")
+    implementation("org.springframework.boot:spring-boot-starter-security-oauth2-resource-server")
+    implementation("org.springframework.boot:spring-boot-starter-restclient")
+    implementation("org.springframework.boot:spring-boot-starter-flyway")
+    implementation("tools.jackson.module:jackson-module-kotlin")
+    implementation("tools.jackson.dataformat:jackson-dataformat-yaml")
     implementation("org.flywaydb:flyway-database-hsqldb")
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation("org.hsqldb:hsqldb")
@@ -51,9 +49,12 @@ dependencies {
     testImplementation("net.jadler:jadler-core:$jadlerVersion")
     testImplementation("net.jadler:jadler-jdk:$jadlerVersion")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
+    testImplementation("org.springframework.boot:spring-boot-resttestclient")
     testImplementation("com.jayway.jsonpath:json-path-assert:2.7.0")
-    testImplementation("org.testcontainers:junit-jupiter")
-    testImplementation("org.testcontainers:postgresql")
+    testImplementation("org.testcontainers:testcontainers-junit-jupiter")
+    testImplementation("org.testcontainers:testcontainers-postgresql")
 }
 
 tasks.bootRun {

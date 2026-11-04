@@ -143,6 +143,7 @@ api_definition: "{\"openapi\":\"3.0.0\",\"info\":{\"title\":\"Tiny\",\"version\"
 > body: {"api_definition":{"openapi":"3.0.0","info":{"title":"Tiny","version":"1.0.0"},"paths":{}}}
 < 406
 < content-type: application/problem+json
+< location: http://localhost:<port>/api-violations/<uuid>
 < vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
 < body: {"title":"Not Acceptable","status":406,"detail":"No acceptable representation"}
 
@@ -152,7 +153,6 @@ api_definition: "{\"openapi\":\"3.0.0\",\"info\":{\"title\":\"Tiny\",\"version\"
 > body: {"api_definition":{"openapi":"3.0.0","info":{"title":"Tiny","version":"1.0.0"},"paths":{}}}
 < 404
 < content-type: application/json
-< vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
 < body: {"timestamp":"<timestamp>","status":404,"error":"Not Found","path":"/api-violations/"}
 
 ### post yaml suffix
@@ -161,7 +161,7 @@ api_definition: "{\"openapi\":\"3.0.0\",\"info\":{\"title\":\"Tiny\",\"version\"
 > body: {"api_definition":{"openapi":"3.0.0","info":{"title":"Tiny","version":"1.0.0"},"paths":{}}}
 < 404
 < content-type: application/json
-< vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+< content-disposition: inline;filename=f.txt
 < body: {"timestamp":"<timestamp>","status":404,"error":"Not Found","path":"/api-violations.yaml"}
 
 ### post json suffix
@@ -170,7 +170,6 @@ api_definition: "{\"openapi\":\"3.0.0\",\"info\":{\"title\":\"Tiny\",\"version\"
 > body: {"api_definition":{"openapi":"3.0.0","info":{"title":"Tiny","version":"1.0.0"},"paths":{}}}
 < 404
 < content-type: application/json
-< vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
 < body: {"timestamp":"<timestamp>","status":404,"error":"Not Found","path":"/api-violations.json"}
 
 ### post ignore rules
@@ -257,7 +256,7 @@ api_definition: "{\"openapi\":\"3.0.0\",\"info\":{\"title\":\"Tiny\",\"version\"
 < 400
 < content-type: application/problem+json
 < vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
-< body: {"title":"Bad Request","status":400,"detail":"JSON parse error: Cannot construct instance of `java.util.ArrayList` (although at least one Creator exists): no String-argument constructor/factory method to deserialize from String value ('x')"}
+< body: {"title":"Bad Request","status":400,"detail":"JSON parse error: Cannot deserialize value of type `java.util.ArrayList<java.lang.String>` from String value (token `JsonToken.VALUE_STRING`)"}
 
 ### post unknown host
 > POST /api-violations
@@ -315,7 +314,6 @@ api_definition: "{\"openapi\":\"3.0.0\",\"info\":{\"title\":\"Tiny\",\"version\"
 > GET /api-violations/{id}/
 < 404
 < content-type: application/json
-< vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
 < body: {"timestamp":"<timestamp>","status":404,"error":"Not Found","path":"/api-violations/<uuid>/"}
 
 ### get review accept yaml
@@ -368,6 +366,7 @@ api_definition: "{\"openapi\":\"3.0.0\",\"info\":{\"title\":\"Tiny\",\"version\"
 < 400
 < content-type: application/problem+json
 < vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+< content-disposition: inline;filename=f.txt
 < body: {"title":"Bad Request","status":400,"detail":"Method parameter 'externalId': Failed to convert value of type 'java.lang.String' to required type 'java.util.UUID'; UUID string too large"}
 
 ### get review json suffix
@@ -410,7 +409,6 @@ api_definition: "{\"openapi\":\"3.0.0\",\"info\":{\"title\":\"Tiny\",\"version\"
 > GET /api-violations/
 < 404
 < content-type: application/json
-< vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
 < body: {"timestamp":"<timestamp>","status":404,"error":"Not Found","path":"/api-violations/"}
 
 ### put review
@@ -453,7 +451,6 @@ api_definition: "{\"openapi\":\"3.0.0\",\"info\":{\"title\":\"Tiny\",\"version\"
 > GET /supported-rules/
 < 404
 < content-type: application/json
-< vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
 < body: {"timestamp":"<timestamp>","status":404,"error":"Not Found","path":"/supported-rules/"}
 
 ### rules accept yaml
@@ -498,14 +495,13 @@ rules:
 > GET /supported-rules.yaml
 < 404
 < content-type: application/json
-< vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+< content-disposition: inline;filename=f.txt
 < body: {"timestamp":"<timestamp>","status":404,"error":"Not Found","path":"/supported-rules.yaml"}
 
 ### rules json suffix
 > GET /supported-rules.json
 < 404
 < content-type: application/json
-< vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
 < body: {"timestamp":"<timestamp>","status":404,"error":"Not Found","path":"/supported-rules.json"}
 
 ### rules accept html
@@ -597,14 +593,13 @@ rules:
 > GET /review-statistics/
 < 404
 < content-type: application/json
-< vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
 < body: {"timestamp":"<timestamp>","status":404,"error":"Not Found","path":"/review-statistics/"}
 
 ### statistics yaml suffix
 > GET /review-statistics.yaml
 < 404
 < content-type: application/json
-< vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+< content-disposition: inline;filename=f.txt
 < body: {"timestamp":"<timestamp>","status":404,"error":"Not Found","path":"/review-statistics.yaml"}
 
 ### statistics accept yaml
@@ -1219,7 +1214,6 @@ hint_violations: 0
 > GET /api/
 < 404
 < content-type: application/json
-< vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
 < body: <omitted, json object>
 
 ### api accept json
@@ -1687,7 +1681,6 @@ components:
 > GET /unknown
 < 404
 < content-type: application/json
-< vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
 < body: {"timestamp":"<timestamp>","status":404,"error":"Not Found","path":"/unknown"}
 
 ### unknown path post
@@ -1696,7 +1689,6 @@ components:
 > body: {}
 < 404
 < content-type: application/json
-< vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
 < body: {"timestamp":"<timestamp>","status":404,"error":"Not Found","path":"/unknown"}
 
 ### unknown path accept yaml
@@ -1704,7 +1696,6 @@ components:
 > Accept: application/x-yaml
 < 404
 < content-type: application/x-yaml
-< vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
 < body: ---
 timestamp: <timestamp>
 status: 404
@@ -1715,21 +1706,18 @@ path: "/unknown"
 > GET /
 < 404
 < content-type: application/json
-< vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
 < body: {"timestamp":"<timestamp>","status":404,"error":"Not Found","path":"/"}
 
 ### health on the main port
 > GET /health
 < 404
 < content-type: application/json
-< vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
 < body: {"timestamp":"<timestamp>","status":404,"error":"Not Found","path":"/health"}
 
 ### metrics on the main port
 > GET /metrics
 < 404
 < content-type: application/json
-< vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
 < body: {"timestamp":"<timestamp>","status":404,"error":"Not Found","path":"/metrics"}
 
 ### management health
@@ -1773,28 +1761,24 @@ path: "/unknown"
 > GET /info  [management port]
 < 404
 < content-type: application/json
-< vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
 < body: {"timestamp":"<timestamp>","status":404,"error":"Not Found","path":"/info"}
 
 ### management env
 > GET /env  [management port]
 < 404
 < content-type: application/json
-< vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
 < body: {"timestamp":"<timestamp>","status":404,"error":"Not Found","path":"/env"}
 
 ### management unknown
 > GET /unknown  [management port]
 < 404
 < content-type: application/json
-< vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
 < body: {"timestamp":"<timestamp>","status":404,"error":"Not Found","path":"/unknown"}
 
 ### management api
 > GET /api  [management port]
 < 404
 < content-type: application/json
-< vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
 < body: {"timestamp":"<timestamp>","status":404,"error":"Not Found","path":"/api"}
 
 ### management health post

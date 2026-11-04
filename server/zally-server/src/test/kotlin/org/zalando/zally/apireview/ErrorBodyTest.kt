@@ -1,6 +1,6 @@
 package org.zalando.zally.apireview
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.ObjectMapper
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -37,7 +37,7 @@ class ErrorBodyTest : HttpContractTest() {
 
         assertProblem(response, status)
         assertThat(fields(response)).containsExactlyInAnyOrder("title", "status", "detail")
-        assertThat(json(response).path("detail").asText()).isNotBlank()
+        assertThat(json(response).path("detail").asString()).isNotBlank()
     }
 
     @Test
@@ -46,7 +46,7 @@ class ErrorBodyTest : HttpContractTest() {
 
         assertProblem(response, 404)
         assertThat(fields(response)).containsExactlyInAnyOrder("title", "status")
-        assertThat(json(response).path("title").asText()).isEqualTo("Not Found")
+        assertThat(json(response).path("title").asString()).isEqualTo("Not Found")
     }
 
     @Test
@@ -54,8 +54,8 @@ class ErrorBodyTest : HttpContractTest() {
         val response = send("POST", "/api-violations", body = """{"my_api":"dummy"}""")
 
         assertProblem(response, 400)
-        assertThat(json(response).path("title").asText()).isEqualTo("Bad Request")
-        assertThat(json(response).path("detail").asText()).isEqualTo("An api definition is missing in api_definition field")
+        assertThat(json(response).path("title").asString()).isEqualTo("Bad Request")
+        assertThat(json(response).path("detail").asString()).isEqualTo("An api definition is missing in api_definition field")
     }
 
     @Test
@@ -64,7 +64,7 @@ class ErrorBodyTest : HttpContractTest() {
 
         assertProblem(response, 404)
         assertThat(fields(response)).containsExactlyInAnyOrder("title", "status", "detail")
-        assertThat(json(response).path("detail").asText())
+        assertThat(json(response).path("detail").asString())
             .isEqualTo("Unknown host while retrieving api definition url: remote-localhost")
     }
 
@@ -88,5 +88,10 @@ class ErrorBodyTest : HttpContractTest() {
 
     private fun json(response: RawHttp.Response) = objectMapper.readTree(response.body)
 
-    private fun fields(response: RawHttp.Response): List<String> = json(response).fieldNames().asSequence().toList()
+    private fun fields(response: RawHttp.Response): List<String> =
+        json(response)
+            .propertyNames()
+            .iterator()
+            .asSequence()
+            .toList()
 }

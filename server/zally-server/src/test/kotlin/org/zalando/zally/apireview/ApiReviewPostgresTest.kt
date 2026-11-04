@@ -7,15 +7,15 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
-import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
+import org.testcontainers.postgresql.PostgreSQLContainer
 import org.zalando.zally.core.Result
 import org.zalando.zally.dto.ApiDefinitionRequest
 import org.zalando.zally.rule.api.Severity
@@ -386,7 +386,7 @@ class ApiReviewPostgresTest {
 
         @Container
         @JvmField
-        val postgres = PostgreSQLContainer<Nothing>("postgres:13")
+        val postgres = PostgreSQLContainer("postgres:13")
 
         @JvmStatic
         @DynamicPropertySource
