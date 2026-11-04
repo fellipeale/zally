@@ -26,7 +26,7 @@ object JadlerUtil {
         val url = String.format("http://localhost:%d/%s", port(), resourceName)
 
         onRequest()
-            .havingMethodEqualTo(GET.name)
+            .havingMethodEqualTo(GET.name())
             .havingPathEqualTo("/$resourceName")
             .respond()
             .withStatus(status)
@@ -41,7 +41,7 @@ object JadlerUtil {
         val url = "http://localhost:" + port() + remotePath
 
         onRequest()
-            .havingMethodEqualTo(GET.name)
+            .havingMethodEqualTo(GET.name())
             .havingPathEqualTo(remotePath)
             .respond()
             .withStatus(NOT_FOUND.value())

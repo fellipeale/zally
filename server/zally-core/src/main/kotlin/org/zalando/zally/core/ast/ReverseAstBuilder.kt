@@ -123,7 +123,7 @@ class ReverseAstBuilder<T : Any> internal constructor(
                     if (m.isAnnotationPresent(JsonAnyGetter::class.java)) {
                         // A `JsonAnyGetter` method is simply a wrapper for nested properties.
                         // We must not use the method name but re-use the current pointer.
-                        nodes.push(Node(value, pointer, marker, true))
+                        nodes.push(Node(value, pointer, marker, skip = true))
                     } else {
                         // Do not add extension names to the JsonNode path
                         val nextPath =
@@ -131,9 +131,11 @@ class ReverseAstBuilder<T : Any> internal constructor(
                                 .takeIf { it !in this.extensionMethodNames }
                                 ?.removePrefix("get")
                                 ?.replaceFirstChar({ it.lowercase() })
-                                ?: ""
 
-                        nodes.push(Node(value, pointer + nextPath.toEscapedJsonPointer(), marker))
+                        // An extension method keeps the current pointer. (Appending an empty segment only worked
+                        // because JsonPointer.append in Jackson 2.14 dropped the trailing slash; newer versions keep it.)
+                        val next = nextPath?.let { pointer + it.toEscapedJsonPointer() } ?: pointer
+                        nodes.push(Node(value, next, marker))
                     }
                 }
             } catch (e: ReflectiveOperationException) {

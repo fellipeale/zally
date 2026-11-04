@@ -188,7 +188,7 @@ class RestApiViolationsTest : RestApiBaseTest() {
             )
 
         assertThat(responseEntity.statusCode).isEqualTo(NOT_FOUND)
-        assertThat(responseEntity.body!!.detail).isEqualTo("404 Not Found: \"NotFound\" while retrieving api definition url")
+        assertThat(responseEntity.body!!.detail).startsWith("404 Not Found").endsWith("\"NotFound\" while retrieving api definition url")
     }
 
     @Test

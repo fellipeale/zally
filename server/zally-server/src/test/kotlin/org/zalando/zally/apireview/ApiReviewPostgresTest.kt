@@ -3,8 +3,9 @@ package org.zalando.zally.apireview
 import com.fasterxml.jackson.core.JsonPointer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
@@ -25,15 +26,14 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.TimeZone
 import java.util.UUID
-import javax.persistence.EntityManager
+import jakarta.persistence.EntityManager
 
 /**
  * Runs the real Flyway migrations and the JPA mapping against PostgreSQL 13 (the version used by
  * `docker-compose.yaml`), which every other test replaces with HSQLDB.
  *
  * It pins the storage contract that must survive framework upgrades: `api_review.created` is a
- * `TIMESTAMP WITHOUT TIME ZONE` holding UTC wall-clock time. On Spring Boot 2.7 (Jadira) that only holds while the
- * JVM default time zone is UTC, as in the container image; see `created is written in the JVM time zone`.
+ * `TIMESTAMP WITHOUT TIME ZONE` holding UTC wall-clock time, whatever the JVM default time zone.
  */
 @DataJpaTest
 @Testcontainers(disabledWithoutDocker = true)
@@ -50,11 +50,6 @@ class ApiReviewPostgresTest {
     private lateinit var jdbc: JdbcTemplate
 
     private val originalTimeZone = TimeZone.getDefault()
-
-    // The container image runs with a UTC default zone. Jadira (Boot 2.7) reads and writes the JVM-local wall-clock
-    // time of the column, so the stored value is only UTC while the JVM zone is UTC. See the migration plan.
-    @BeforeEach
-    fun useUtcLikeTheContainerImage() = TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
 
     @AfterEach
     fun restoreTimeZone() = TimeZone.setDefault(originalTimeZone)
@@ -156,13 +151,13 @@ class ApiReviewPostgresTest {
         assertThat(literal).isEqualTo("2023-05-01T10:15:30")
     }
 
-    @Test
-    fun `created is written in the JVM time zone`() {
-        // Documents a Boot 2.7 / Jadira quirk, not a wanted behaviour: `javaZone=UTC` does not make the stored value
-        // UTC, the column gets the wall-clock time of the JVM default zone. Harmless in a UTC container. Hibernate 6
-        // (stage 3) changes this, and the upgrade must either keep UTC storage or migrate the data.
-        TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"))
-        val created = OffsetDateTime.of(2023, 5, 1, 10, 15, 30, 0, ZoneOffset.UTC)
+    @ParameterizedTest
+    @ValueSource(strings = ["UTC", "Europe/Berlin", "America/Los_Angeles", "Pacific/Auckland"])
+    fun `created is written as UTC wall-clock time whatever the JVM time zone`(zone: String) {
+        // Hibernate 5 with Jadira stored the wall-clock time of the JVM zone; since Hibernate 6 it is always UTC
+        // (hibernate.jdbc.time_zone). Identical in a UTC container, which is why existing rows stay valid.
+        TimeZone.setDefault(TimeZone.getTimeZone(zone))
+        val created = OffsetDateTime.of(2023, 5, 1, 12, 15, 30, 0, ZoneOffset.ofHours(2))
         val review = repository.save(ApiReview(ApiDefinitionRequest(), apiDefinition = OPENAPI, created = created))
         flushAndClear()
 
@@ -173,7 +168,28 @@ class ApiReviewPostgresTest {
                 review.id,
             )
 
-        assertThat(literal).isEqualTo("2023-05-01T12:15:30")
+        assertThat(literal).isEqualTo("2023-05-01T10:15:30")
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["UTC", "Europe/Berlin", "America/Los_Angeles", "Pacific/Auckland"])
+    fun `reads a row written as UTC whatever the JVM time zone`(zone: String) {
+        TimeZone.setDefault(TimeZone.getTimeZone(zone))
+        val externalId = UUID.randomUUID()
+        jdbc.update(
+            """
+            INSERT INTO api_review (
+                name, api_definition, successful_processed, day, created, number_of_endpoints,
+                must_violations, should_violations, may_violations, hint_violations, external_id
+            ) VALUES ('Legacy API', '{}', TRUE, DATE '2023-05-01', TIMESTAMP '2023-05-01 10:15:30', 0, 0, 0, 0, 0, ?)
+            """.trimIndent(),
+            externalId,
+        )
+        entityManager.clear()
+
+        val found = repository.findByExternalId(externalId)!!
+
+        assertThat(found.created.toInstant()).isEqualTo(OffsetDateTime.of(2023, 5, 1, 10, 15, 30, 0, ZoneOffset.UTC).toInstant())
     }
 
     @Test

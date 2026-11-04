@@ -19,7 +19,6 @@ class WebMvcConfiguration : WebMvcConfigurer {
 
     override fun configureContentNegotiation(configurer: ContentNegotiationConfigurer) {
         configurer
-            .favorPathExtension(true)
             .favorParameter(false)
             .ignoreAcceptHeader(false)
             .defaultContentType(MediaType.APPLICATION_JSON)
