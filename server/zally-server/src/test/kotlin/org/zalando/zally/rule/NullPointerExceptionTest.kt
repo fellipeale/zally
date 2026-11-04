@@ -403,7 +403,7 @@ class NullPointerExceptionTest {
             listOf(EMPTY_JSON_POINTER) +
                 when (this) {
                     is ObjectNode -> {
-                        fields().asSequence().toList().flatMap { (name, node) ->
+                        properties().iterator().asSequence().toList().flatMap { (name, node) ->
                             node.allJsonPointers().map {
                                 EMPTY_JSON_POINTER + name.toEscapedJsonPointer() + it
                             }

@@ -1,6 +1,6 @@
 package org.zalando.zally.apireview
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.ObjectMapper
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -18,17 +18,17 @@ class ActuatorTest : HttpContractTest() {
         val response = send("GET", "/health", management = true)
 
         assertThat(response.status).isEqualTo(200)
-        assertThat(objectMapper.readTree(response.body).path("status").asText()).isEqualTo("UP")
+        assertThat(objectMapper.readTree(response.body).path("status").asString()).isEqualTo("UP")
     }
 
     @Test
     fun `metrics lists the meter names and serves a single meter`() {
         val names = objectMapper.readTree(send("GET", "/metrics", management = true).body).path("names")
-        assertThat(names.map { it.asText() }).contains("jvm.memory.used", "http.server.requests")
+        assertThat(names.values().map { it.asString() }).contains("jvm.memory.used", "http.server.requests")
 
         val meter = send("GET", "/metrics/jvm.memory.used", management = true)
         assertThat(meter.status).isEqualTo(200)
-        assertThat(objectMapper.readTree(meter.body).path("name").asText()).isEqualTo("jvm.memory.used")
+        assertThat(objectMapper.readTree(meter.body).path("name").asString()).isEqualTo("jvm.memory.used")
     }
 
     @Test

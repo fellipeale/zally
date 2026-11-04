@@ -50,7 +50,8 @@ class ProductionSecurityTest : ProductionProfileTest() {
 
         assertThat(response.status).isEqualTo(401)
         assertThat(response.contentType).isEqualTo("application/problem+json")
-        assertThat(response.header("www-authenticate")).isEqualTo("Bearer")
+        // Spring Security 7 adds resource_metadata="..." to the challenge
+        assertThat(response.header("www-authenticate")).startsWith("Bearer")
         assertThat(response.body).isEqualTo(
             """{"title":"Unauthorized","status":401,"detail":"Full authentication is required to access this resource"}""",
         )
