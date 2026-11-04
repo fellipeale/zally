@@ -21,6 +21,9 @@ dependencies {
         implementation("io.swagger:swagger-parser:1.0.76") {
             because("1.0.64 is incompatible with snakeyaml 2")
         }
+        implementation("io.swagger.parser.v3:swagger-parser-v3:2.1.22") {
+            because("2.1.12 calls SafeConstructor() as well and logs 'Error snake-parsing yaml content' for every YAML definition")
+        }
     }
 
     val jadlerVersion = "1.3.1"
